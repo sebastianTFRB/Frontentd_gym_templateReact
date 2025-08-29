@@ -60,7 +60,7 @@ const SidebarContent: MenuItem[] = [
         name: "Membresias",
         icon: "material-symbols:card-membership-outline",
         id: uniqueId(),
-        url: "/ui/typography",
+        url: "/Membresia",
         isPro: false,
       },
       {

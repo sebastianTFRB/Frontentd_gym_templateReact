@@ -136,7 +136,7 @@ export default function ClientesList() {
                     >
                       {/* Editar */}
                       <Dropdown.Item
-                        className="flex gap-3 cursor-pointer"
+                        className="flex gap-3 cursor-pointer text-yellow-300"
                         onClick={() => navigate(`/edit-client/${c.id}`)}
                       >
                         <Icon icon="solar:pen-new-square-broken" height={18} />

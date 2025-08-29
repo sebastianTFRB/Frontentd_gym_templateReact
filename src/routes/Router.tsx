@@ -27,7 +27,7 @@ const Error = lazy(() => import('../views/auth/error/Error'));
 //views
 const ClientesList = lazy(() => import('../views/clientList/Clientes/Client') )
 const EditClient = lazy(() => import('../views/editClient/EditClient'));
-
+const Membresias = lazy(() => import('../views/Membresia/Membresia') )
 
 const Router = [
   {
@@ -44,6 +44,8 @@ const Router = [
       { path: '/sample-page', exact: true, element: <SamplePage /> },
       { path: '/ClientList', exact: true, element: <ClientesList /> },
       {path: '/edit-client/:id', exact: true, element: <EditClient /> },
+      { path: '/Membresia', exact: true, element: <Membresias /> },
+      
 
       
       { path: '*', element: <Navigate to="/auth/404" /> },
