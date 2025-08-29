@@ -93,7 +93,7 @@ const SidebarContent: MenuItem[] = [
         name: "Venta de Membresias",
         icon: "solar:user-plus-broken",
         id: uniqueId(),
-        url: "/ui/form",
+        url: "/VentaMembresia",
         isPro: false,
 
       },

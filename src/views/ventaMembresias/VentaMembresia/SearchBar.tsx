@@ -1,40 +1,44 @@
+// src/components/VentaMembresia/SearchBar.tsx
 import React, { useState, useEffect } from "react";
 
-export default function SearchBar({
+// 🔹 Tipo genérico para los datos
+interface SearchBarProps<T> {
+  data: T[];
+  displayField: (item: T) => string;       // cómo se muestran los resultados en la lista
+  inputDisplayField?: (item: T) => string; // cómo se muestra en el input al seleccionar
+  onSelect: (item: T) => void;             // acción al seleccionar
+  placeholder?: string;
+  value?: string;                           // valor externo para sincronizar
+}
+
+export default function SearchBar<T>({
   data,
-  displayField,        // cómo se muestran los resultados en la lista
-  inputDisplayField,   // cómo se muestra en el input
+  displayField,
+  inputDisplayField,
   onSelect,
   placeholder,
-  value                // 👈 valor que viene del padre (formulario)
-}) {
+  value,
+}: SearchBarProps<T>) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<T[]>([]);
 
   // 🔹 Mantener sincronizado el valor externo con el input
   useEffect(() => {
-    if (value) {
-      setQuery(value);
-    } else {
-      setQuery("");
-    }
+    if (value) setQuery(value);
+    else setQuery("");
   }, [value]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     setQuery(inputValue);
 
     if (inputValue.length > 0) {
       const searchValue = inputValue.toLowerCase();
       setResults(
-        data.filter(item => {
-          const fullName = `${item.nombre} ${item.apellido}`.toLowerCase();
-          return (
-            fullName.includes(searchValue) ||
-            (item.documento && item.documento.toLowerCase().includes(searchValue)) ||
-            (item.telefono && item.telefono.toLowerCase().includes(searchValue)) ||
-            (item.correo && item.correo.toLowerCase().includes(searchValue))
-          );
+        data.filter((item: any) => {
+          // suponer que los objetos pueden tener nombre, apellido, documento, correo, teléfono
+          const fullText = `${item.nombre || ""} ${item.apellido || ""} ${item.documento || ""} ${item.correo || ""} ${item.telefono || ""}`.toLowerCase();
+          return fullText.includes(searchValue);
         })
       );
     } else {
@@ -42,7 +46,7 @@ export default function SearchBar({
     }
   };
 
-  const handleSelect = (item) => {
+  const handleSelect = (item: T) => {
     setQuery(inputDisplayField ? inputDisplayField(item) : displayField(item));
     setResults([]);
     onSelect(item);
@@ -70,16 +74,16 @@ export default function SearchBar({
             border: "1px solid #ddd",
             zIndex: 1000,
             maxHeight: "200px",
-            overflowY: "auto"
+            overflowY: "auto",
           }}
         >
-          {results.map(item => (
+          {results.map((item: any) => (
             <li
               key={item.id}
               onClick={() => handleSelect(item)}
               style={{
                 padding: "6px 10px",
-                cursor: "pointer"
+                cursor: "pointer",
               }}
             >
               {displayField(item)}
