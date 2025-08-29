@@ -47,7 +47,14 @@ const SidebarContent: MenuItem[] = [
         isPro: false,
 
       },
-      
+      {
+        name: "ver membresias",
+        icon: "solar:user-plus-broken",
+        id: uniqueId(),
+        url: "/clientes/membresias",
+        isPro: false,
+
+      },
        
       
     ],

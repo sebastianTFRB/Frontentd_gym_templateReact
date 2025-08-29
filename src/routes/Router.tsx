@@ -31,6 +31,8 @@ const Membresias = lazy(() => import('../views/Membresia/Membresia') )
 const EditMembresia = lazy(() => import('../views/Membresia/MembresiaEdit')); 
 const TipoDescuentoPage =lazy(() => import('../views/tipoDescuento/TipoDescuentoPage') )
 const VentaMembresiasPage =lazy(() => import('../views/ventaMembresias/ventaMembresia'))
+const ResumenMembresias = lazy(() => import('../views/clientList/Clientes/ResumenMembresias'));
+
 const Router = [
   {
     path: '/',
@@ -46,11 +48,11 @@ const Router = [
       { path: '/sample-page', exact: true, element: <SamplePage /> },
       { path: '/ClientList', exact: true, element: <ClientesList /> },
       {path: '/edit-client/:id', exact: true, element: <EditClient /> },
-      { path: '/Membresia', exact: true, element: <Membresias /> },
+      { path: '/membresia', exact: true, element: <Membresias /> },
       { path: '/edit-membresia/:id', exact: true, element: <EditMembresia /> },
       { path: '/TipoDescuento', exact: true, element: <TipoDescuentoPage /> },
       { path: '/VentaMembresia', exact: true, element: <VentaMembresiasPage /> },
-      
+      { path: '/clientes/membresias', element: <ResumenMembresias /> },
       
       
 

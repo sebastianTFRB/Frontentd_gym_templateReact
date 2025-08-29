@@ -100,7 +100,7 @@ const Topbar = () => {
                             </div> */}
                             <Link target="_black" to="https://adminmart.com/product/matdash-tailwind-react-admin-template/?ref=56" className="flex items-center px-4 py-[11px] rounded-[4px] gap-2 text-white bg-[#3772ff] hover:bg-[#5d87ff]">
                                 <Icon icon="solar:crown-linear" width={18} />
-                                <h4 className="text-base font-normal leading-none text-white">Get Pro</h4>
+                                <h4 className="text-base font-normal leading-none text-white">Abrir puerta</h4>
                             </Link>
                             <Notification />
                             <Profile />
