@@ -26,6 +26,8 @@ const Error = lazy(() => import('../views/auth/error/Error'));
 
 //views
 const ClientesList = lazy(() => import('../views/clientList/Clientes/Client') )
+const EditClient = lazy(() => import('../views/editClient/EditClient'));
+
 
 const Router = [
   {
@@ -41,6 +43,9 @@ const Router = [
       { path: '/icons/solar', exact: true, element: <Solar /> },
       { path: '/sample-page', exact: true, element: <SamplePage /> },
       { path: '/ClientList', exact: true, element: <ClientesList /> },
+      {path: '/edit-client/:id', exact: true, element: <EditClient /> },
+
+      
       { path: '*', element: <Navigate to="/auth/404" /> },
     ],
   },
