@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   getMembresias,
   createMembresia,
@@ -17,6 +18,7 @@ export default function Membresias() {
   const [membresias, setMembresias] = useState<Membresia[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Membresia | null>(null);
+  const navigate = useNavigate();
 
   const [form, setForm] = useState<Membresia>({
     id: 0,
@@ -174,14 +176,12 @@ export default function Membresias() {
                       >
                         <Dropdown.Item
                           className="flex gap-3 cursor-pointer"
-                          onClick={() => {
-                            setEditing(m);
-                            setForm(m);
-                          }}
+                          onClick={() => navigate(`/edit-membresia/${m.id}`)}
                         >
                           <Icon icon="solar:pen-new-square-broken" height={18} />
                           <span>Editar</span>
                         </Dropdown.Item>
+
 
                         <Dropdown.Item
                           className="flex gap-3 cursor-pointer text-red-600"

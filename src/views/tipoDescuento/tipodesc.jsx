@@ -47,14 +47,7 @@ export default function TipoDescuentoPage() {
         <h2> Gestión de Tipos de Descuento</h2>
 
         <div  >
-          <div  >
-            <TipoDescuentoForm
-              editing={editing}
-              initialData={current}
-              onSuccess={handleSuccess}
-              onCancel={handleCancel}
-            />
-          </div>
+         
 
           <div  >
             <h3>Lista de Descuentos</h3>

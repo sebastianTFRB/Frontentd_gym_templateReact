@@ -67,7 +67,7 @@ const SidebarContent: MenuItem[] = [
         name: "Descuentos",
         icon: "material-symbols:percent-discount-outline",
         id: uniqueId(),
-        url: "/ui/table",
+        url: "/TipoDescuento",
         isPro: false,
       },
       // {
