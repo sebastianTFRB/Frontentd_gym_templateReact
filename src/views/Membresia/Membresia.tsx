@@ -127,7 +127,7 @@ export default function Membresias() {
                       <h5 className="text-base">
                         ${m.precio_base}
                         <span className="text-dark opacity-70">
-                          <span className="mx-1">/</span>MXN
+                          <span className="mx-1">/</span>COP
                         </span>
                       </h5>
                     </Table.Cell>
