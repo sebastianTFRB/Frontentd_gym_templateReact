@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Label, TextInput, Select, Spinner, Button } from "flowbite-react";
+import { Spinner } from "flowbite-react";
+import { Icon } from "@iconify/react";
 import { createClienteConMembresia } from "../../../api/clientes_membresia";
 import { getMembresias } from "../../../api/membresias";
 
@@ -64,7 +65,7 @@ interface ClientePayload {
   correo?: string;
   telefono?: string;
   direccion?: string;
-  fotografia?: string;   // aquí irá la ruta devuelta por el backend
+  fotografia?: string;   // ruta devuelta por el backend
   huella_base64: string; // vacío
 }
 interface VentaPayload {
@@ -137,9 +138,7 @@ export default function NuevoClienteConMembresia() {
 
   // Fecha fin auto +1 mes (solo si el usuario NO la tocó)
   useEffect(() => {
-    if (!touchedFin) {
-      setFechaFin(addMonthsStr(fechaInicio, 1));
-    }
+    if (!touchedFin) setFechaFin(addMonthsStr(fechaInicio, 1));
   }, [fechaInicio, touchedFin]);
 
   // Cargar membresías
@@ -250,6 +249,10 @@ export default function NuevoClienteConMembresia() {
     return Number.isNaN(n) || n < 0;
   }, [precioFinal]);
 
+  // ===== Clases input del template (con borde rojo si hay error)
+  const baseInput =
+    "block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900 focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg";
+
   // Submit
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,8 +296,8 @@ export default function NuevoClienteConMembresia() {
           correo: correo.trim() || undefined,
           telefono: telefono.trim() || undefined,
           direccion: direccion.trim() || undefined,
-          fotografia: fotografiaRuta, // ruta devuelta por el backend (o "")
-          huella_base64: "", // requerido por el schema
+          fotografia: fotografiaRuta,
+          huella_base64: "",
         },
         venta: {
           id_membresia: Number(idMembresia),
@@ -320,71 +323,168 @@ export default function NuevoClienteConMembresia() {
 
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-      <header className="flex items-center justify-between mb-3">
+      {/* Header con botón Volver estilo template */}
+      <header className="flex items-center justify-between mb-4">
         <h5 className="card-title">Nuevo cliente con membresía</h5>
-        <Link to="/clientes" className="btn">Volver</Link>
+
+        <Link
+          to="/clientes/membresias"
+          role="button"
+          className="flex items-center justify-center px-4 py-3 gap-2 text-[15px] leading-[normal] font-normal text-white dark:text-white bg-primary rounded-xl hover:text-white hover:bg-primary dark:hover:text-white shadow-btnshdw"
+        >
+          <Icon icon="solar:alt-arrow-left-outline" width="18" height="18" />
+          <span>Volver</span>
+        </Link>
       </header>
 
-      {error && <div className="mb-3 text-red-600 text-sm">{error}</div>}
-      {info && <div className="mb-3 text-green-600 text-sm">{info}</div>}
+      {error && (
+        <div className="mb-3 text-sm rounded-xl border border-red-200 bg-red-50 text-red-700 px-3 py-2">
+          {error}
+        </div>
+      )}
+      {info && (
+        <div className="mb-3 text-sm rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-2">
+          {info}
+        </div>
+      )}
 
       {loadingCat ? (
         <div className="flex items-center gap-2">
-          <Spinner /><span>Cargando catálogos…</span>
+          <Spinner />
+          <span>Cargando catálogos…</span>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-6">
+        <form onSubmit={onSubmit} className="space-y-8">
           {/* Datos del cliente */}
           <section>
-            <h6 className="font-semibold mb-2">Datos del cliente</h6>
+            <h6 className="font-semibold mb-3">Datos del cliente</h6>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="nombre" value="Nombre *" />
-                <TextInput id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-              </div>
-              <div>
-                <Label htmlFor="apellido" value="Apellido *" />
-                <TextInput id="apellido" value={apellido} onChange={(e) => setApellido(e.target.value)} required />
-              </div>
-              <div>
-                <Label htmlFor="documento" value="Documento *" />
-                <TextInput id="documento" value={documento} onChange={(e) => setDocumento(e.target.value)} required />
-              </div>
-
-              <div>
-                <Label htmlFor="fecha_nacimiento" value="Fecha de nacimiento" />
-                <TextInput
-                  id="fecha_nacimiento"
-                  type="date"
-                  value={fechaNacimiento}
-                  onChange={(e) => setFechaNacimiento(e.target.value)}
-                />
+              {/* Nombre */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="nombre" className="sr-only">Nombre</label>
+                  <input
+                    id="nombre"
+                    type="text"
+                    className={baseInput}
+                    placeholder="Nombre"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="correo" value="Correo" />
-                <TextInput id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+              {/* Apellido */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="apellido" className="sr-only">Apellido</label>
+                  <input
+                    id="apellido"
+                    type="text"
+                    className={baseInput}
+                    placeholder="Apellido"
+                    value={apellido}
+                    onChange={(e) => setApellido(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="telefono" value="Teléfono" />
-                <TextInput id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+
+              {/* Documento */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="documento" className="sr-only">Documento</label>
+                  <input
+                    id="documento"
+                    type="text"
+                    className={baseInput}
+                    placeholder="Documento"
+                    value={documento}
+                    onChange={(e) => setDocumento(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="direccion" value="Dirección" />
-                <TextInput id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+
+              {/* Fecha nacimiento */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="fecha_nacimiento" className="sr-only">Fecha de nacimiento</label>
+                  <input
+                    id="fecha_nacimiento"
+                    type="date"
+                    className={baseInput}
+                    value={fechaNacimiento}
+                    onChange={(e) => setFechaNacimiento(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Correo */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="correo" className="sr-only">Correo</label>
+                  <input
+                    id="correo"
+                    type="email"
+                    className={baseInput}
+                    placeholder="Correo"
+                    value={correo}
+                    onChange={(e) => setCorreo(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Teléfono */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="telefono" className="sr-only">Teléfono</label>
+                  <input
+                    id="telefono"
+                    type="text"
+                    className={baseInput}
+                    placeholder="Teléfono"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Dirección */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="direccion" className="sr-only">Dirección</label>
+                  <input
+                    id="direccion"
+                    type="text"
+                    className={baseInput}
+                    placeholder="Dirección"
+                    value={direccion}
+                    onChange={(e) => setDireccion(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </section>
 
           {/* Foto por webcam */}
           <section>
-            <h6 className="font-semibold mb-2">Fotografía</h6>
+            <h6 className="font-semibold mb-3">Fotografía</h6>
             {!fotoBase64 && !camOn && (
               <div className="flex items-center gap-3">
-                <Button onClick={startCamera}>Abrir cámara</Button>
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90"
+                >
+                  <Icon icon="solar:camera-outline" width="18" height="18" />
+                  Abrir cámara
+                </button>
                 {camError && <span className="text-red-600 text-sm">{camError}</span>}
               </div>
             )}
+
             {camOn && (
               <div className="flex flex-col gap-3">
                 <video
@@ -392,24 +492,47 @@ export default function NuevoClienteConMembresia() {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full max-w-md rounded-md border aspect-video bg-black"
+                  className="w-full max-w-md rounded-xl border aspect-video bg-black"
                 />
                 <div className="flex items-center gap-3">
-                  <Button onClick={takePhoto} disabled={!videoReady}>Tomar foto</Button>
-                  <Button color="light" onClick={stopCamera}>Cancelar</Button>
+                  <button
+                    type="button"
+                    onClick={takePhoto}
+                    disabled={!videoReady}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    <Icon icon="solar:square-round-check-outline" width="18" height="18" />
+                    Tomar foto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                  >
+                    <Icon icon="solar:close-circle-outline" width="18" height="18" />
+                    Cancelar
+                  </button>
                 </div>
                 <canvas ref={canvasRef} className="hidden" />
               </div>
             )}
+
             {fotoBase64 && !camOn && (
               <div className="flex items-center gap-4">
                 <img
                   src={`data:image/jpeg;base64,${fotoBase64}`}
                   alt="preview"
-                  className="h-32 w-32 object-cover rounded-md border"
+                  className="h-32 w-32 object-cover rounded-xl border"
                 />
                 <div className="flex flex-col gap-2">
-                  <Button color="light" onClick={clearPhoto}>Cambiar foto</Button>
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                  >
+                    <Icon icon="solar:refresh-outline" width="18" height="18" />
+                    Cambiar foto
+                  </button>
                 </div>
               </div>
             )}
@@ -417,97 +540,142 @@ export default function NuevoClienteConMembresia() {
 
           {/* Venta */}
           <section>
-            <h6 className="font-semibold mb-2">Venta de membresía</h6>
+            <h6 className="font-semibold mb-3">Venta de membresía</h6>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="id_membresia" value="Membresía *" />
-                <Select
-                  id="id_membresia"
-                  value={idMembresia}
-                  onChange={(e) => setIdMembresia(e.target.value ? Number(e.target.value) : "")}
-                  required
-                >
-                  <option value="">Selecciona…</option>
-                  {membresias.map((m) => (
-                    <option key={m.id} value={m.id}>{m.nombre_membresia}</option>
-                  ))}
-                </Select>
+              {/* Membresía */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="id_membresia" className="sr-only">Membresía</label>
+                  <select
+                    id="id_membresia"
+                    className={baseInput}
+                    value={idMembresia}
+                    onChange={(e) => setIdMembresia(e.target.value ? Number(e.target.value) : "")}
+                    required
+                  >
+                    <option value="">Selecciona…</option>
+                    {membresias.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nombre_membresia}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="fecha_inicio" value="Fecha inicio" />
-                <TextInput
-                  id="fecha_inicio"
-                  type="date"
-                  value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                  color={dateInvalid ? "failure" : undefined}
-                />
+
+              {/* Fecha inicio */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="fecha_inicio" className="sr-only">Fecha inicio</label>
+                  <input
+                    id="fecha_inicio"
+                    type="date"
+                    className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
+                    aria-invalid={dateInvalid || undefined}
+                    value={fechaInicio}
+                    onChange={(e) => setFechaInicio(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="fecha_fin" value="Fecha fin" />
-                <TextInput
-                  id="fecha_fin"
-                  type="date"
-                  value={fechaFin}
-                  onChange={(e) => { setFechaFin(e.target.value); setTouchedFin(true); }}
-                  color={dateInvalid ? "failure" : undefined}
-                  helperText={
-                    dateInvalid ? (
-                      <span className="text-red-600">
-                        La fecha de fin debe ser el mismo día o posterior a la fecha de inicio.
-                      </span>
-                    ) : undefined
-                  }
-                />
+
+              {/* Fecha fin */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="fecha_fin" className="sr-only">Fecha fin</label>
+                  <input
+                    id="fecha_fin"
+                    type="date"
+                    className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
+                    aria-invalid={dateInvalid || undefined}
+                    value={fechaFin}
+                    onChange={(e) => {
+                      setFechaFin(e.target.value);
+                      setTouchedFin(true);
+                    }}
+                  />
+                  {dateInvalid && (
+                    <p className="mt-1 text-xs text-red-600">
+                      La fecha de fin debe ser el mismo día o posterior a la fecha de inicio.
+                    </p>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label htmlFor="precio_final" value="Precio" />
-                <TextInput
-                  id="precio_final"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={precioFinal}
-                  onChange={(e) => setPrecioFinal(e.target.value)}
-                  placeholder="0.00"
-                  color={precioInvalid ? "failure" : undefined}
-                  helperText={
-                    precioInvalid ? (
-                      <span className="text-red-600">El precio debe ser mayor o igual a 0.</span>
-                    ) : undefined
-                  }
-                />
+
+              {/* Precio */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="precio_final" className="sr-only">Precio</label>
+                  <input
+                    id="precio_final"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="0.00"
+                    className={`${baseInput} ${precioInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
+                    aria-invalid={precioInvalid || undefined}
+                    value={precioFinal}
+                    onChange={(e) => setPrecioFinal(e.target.value)}
+                  />
+                  {precioInvalid && (
+                    <p className="mt-1 text-xs text-red-600">El precio debe ser mayor o igual a 0.</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label htmlFor="sesiones" value="Sesiones restantes" />
-                <TextInput
-                  id="sesiones"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={sesionesRestantes}
-                  onChange={(e) => setSesionesRestantes(e.target.value)}
-                  placeholder="0"
-                />
+
+              {/* Sesiones */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="sesiones" className="sr-only">Sesiones restantes</label>
+                  <input
+                    id="sesiones"
+                    type="number"
+                    min={0}
+                    step={1}
+                    placeholder="0"
+                    className={baseInput}
+                    value={sesionesRestantes}
+                    onChange={(e) => setSesionesRestantes(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="estado" value="Estado" />
-                <TextInput id="estado" value="Activo" readOnly />
+
+              {/* Estado (solo lectura) */}
+              <div className="flex form-control form-rounded-xl">
+                <div className="relative w-full">
+                  <label htmlFor="estado" className="sr-only">Estado</label>
+                  <input id="estado" type="text" className={baseInput} value="Activo" readOnly />
+                </div>
               </div>
             </div>
           </section>
 
+          {/* Acciones */}
           <div className="flex items-center gap-3">
-            <button type="submit" className="btn" disabled={saving || dateInvalid || precioInvalid}>
+            <button
+              type="submit"
+              disabled={saving || dateInvalid || precioInvalid}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {saving ? (
-                <span className="inline-flex items-center gap-2">
-                  <Spinner size="sm" /> Guardando…
-                </span>
+                <>
+                  <Spinner size="sm" />
+                  Guardando…
+                </>
               ) : (
-                "Guardar"
+                <>
+                  <Icon icon="solar:floppy-disk-outline" width="18" height="18" />
+                  Guardar
+                </>
               )}
             </button>
-            <Link to="/clientes" className="btn btn-secondary">Cancelar</Link>
+
+            <Link
+              to="/clientes/membresias"
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            >
+              <Icon icon="solar:close-circle-outline" width="18" height="18" />
+              Cancelar
+            </Link>
           </div>
         </form>
       )}
