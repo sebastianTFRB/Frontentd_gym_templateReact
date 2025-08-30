@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Label, TextInput, Select, Spinner, Button } from "flowbite-react";
 import { createClienteConMembresia } from "../../../api/clientes_membresia";
@@ -20,34 +20,38 @@ function addMonthsStr(isoDate: string, months: number) {
   ).padStart(2, "0")}`;
 }
 
-// ===== OPFS check
-function opfsSupported() {
-  return typeof navigator !== "undefined" && !!(navigator.storage as any)?.getDirectory;
-}
+// ===== Subir foto al backend
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
-// ===== OPFS helpers
 function b64ToBlob(b64: string, mime = "image/jpeg"): Blob {
   const bin = atob(b64);
   const arr = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new Blob([arr], { type: mime });
 }
-async function opfsSaveBase64(relPath: string, b64: string) {
-  // @ts-ignore
-  const root: FileSystemDirectoryHandle = await navigator.storage.getDirectory();
-  const parts = relPath.split("/").filter(Boolean);
-  const fileName = parts.pop()!;
-  let dir = root;
-  for (const p of parts) {
-    // @ts-ignore
-    dir = await dir.getDirectoryHandle(p, { create: true });
+
+async function uploadBase64ToBackend(
+  documento: string,
+  base64: string,
+  mime: "image/jpeg" | "image/png" = "image/jpeg"
+): Promise<string> {
+  const blob = b64ToBlob(base64, mime);
+  const fd = new FormData();
+  fd.append("documento", documento);
+  fd.append("file", blob, `${documento}.${mime === "image/png" ? "png" : "jpg"}`);
+
+  const res = await fetch(`${API_BASE}/uploads/files/upload-foto`, {
+    method: "POST",
+    body: fd,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Falló el upload (${res.status}): ${text || res.statusText}`);
   }
-  // @ts-ignore
-  const fileHandle = await dir.getFileHandle(fileName, { create: true });
-  // @ts-ignore
-  const writable = await fileHandle.createWritable();
-  await writable.write(b64ToBlob(b64, "image/jpeg"));
-  await writable.close();
+  const data = await res.json();
+  if (!data?.ruta) throw new Error("El backend no devolvió 'ruta'.");
+  return data.ruta as string; // p.ej. "/media/fotos/123.jpg"
 }
 
 // ===== Tipos locales del payload
@@ -60,8 +64,8 @@ interface ClientePayload {
   correo?: string;
   telefono?: string;
   direccion?: string;
-  fotografia?: string;   // opcional (string), hoy tu back lo acepta
-  huella_base64: string; // string vacío
+  fotografia?: string;   // aquí irá la ruta devuelta por el backend
+  huella_base64: string; // vacío
 }
 interface VentaPayload {
   id_membresia: number;
@@ -127,13 +131,16 @@ export default function NuevoClienteConMembresia() {
   const [idMembresia, setIdMembresia] = useState<number | "">("");
   const [fechaInicio, setFechaInicio] = useState<string>(todayStr());
   const [fechaFin, setFechaFin] = useState<string>(() => addMonthsStr(todayStr(), 1));
+  const [touchedFin, setTouchedFin] = useState(false);
   const [precioFinal, setPrecioFinal] = useState<string>("");
   const [sesionesRestantes, setSesionesRestantes] = useState<string>("");
 
-  // Fecha fin auto +1 mes
+  // Fecha fin auto +1 mes (solo si el usuario NO la tocó)
   useEffect(() => {
-    setFechaFin(addMonthsStr(fechaInicio, 1));
-  }, [fechaInicio]);
+    if (!touchedFin) {
+      setFechaFin(addMonthsStr(fechaInicio, 1));
+    }
+  }, [fechaInicio, touchedFin]);
 
   // Cargar membresías
   useEffect(() => {
@@ -226,9 +233,22 @@ export default function NuevoClienteConMembresia() {
     stopCamera();
   };
 
-  const clearPhoto = () => {
-    setFotoBase64(undefined);
-  };
+  const clearPhoto = () => setFotoBase64(undefined);
+
+  // ✅ Validaciones
+  const dateInvalid = useMemo(() => {
+    if (!fechaInicio || !fechaFin) return false;
+    const di = Date.parse(fechaInicio);
+    const df = Date.parse(fechaFin);
+    if (Number.isNaN(di) || Number.isNaN(df)) return false;
+    return di > df;
+  }, [fechaInicio, fechaFin]);
+
+  const precioInvalid = useMemo(() => {
+    if (precioFinal.trim() === "") return false;
+    const n = Number(precioFinal);
+    return Number.isNaN(n) || n < 0;
+  }, [precioFinal]);
 
   // Submit
   const onSubmit = async (e: React.FormEvent) => {
@@ -236,6 +256,14 @@ export default function NuevoClienteConMembresia() {
     setError(null);
     setInfo(null);
 
+    if (dateInvalid) {
+      setError("La fecha de fin no puede ser anterior a la fecha de inicio.");
+      return;
+    }
+    if (precioInvalid) {
+      setError("El precio debe ser un número mayor o igual a 0.");
+      return;
+    }
     if (!nombre.trim() || !apellido.trim() || !documento.trim()) {
       setError("Nombre, apellido y documento son obligatorios.");
       return;
@@ -247,29 +275,13 @@ export default function NuevoClienteConMembresia() {
 
     setSaving(true);
     try {
-      let fotografia: string | undefined = undefined;
+      let fotografiaRuta = "";
 
-      // Guardado local en OPFS (solo si está disponible)
+      // Si hay foto, súbela primero al backend y obtén la 'ruta'
       if (fotoBase64) {
-        if (!opfsSupported()) {
-          setError(
-            "Tu navegador/origen no permite OPFS. Usa HTTPS o http://localhost en Chrome/Edge/Brave."
-          );
-        } else {
-          try {
-            // @ts-ignore
-            await navigator.storage.persist?.();
-          } catch {}
-          const relPath = `fotos/${documento}.jpg`;
-          try {
-            await opfsSaveBase64(relPath, fotoBase64);
-            fotografia = `opfs:${relPath}`; // opcional para tu back (string)
-            setInfo(`Foto guardada localmente como ${relPath} (OPFS).`);
-          } catch (writeErr) {
-            console.error(writeErr);
-            setError("No se pudo guardar la foto en OPFS.");
-          }
-        }
+        const ruta = await uploadBase64ToBackend(documento.trim(), fotoBase64, "image/jpeg");
+        fotografiaRuta = ruta; // p.ej. "/media/fotos/123.jpg"
+        setInfo("Foto subida correctamente.");
       }
 
       const payload: ClienteMembresiaPayload = {
@@ -281,7 +293,7 @@ export default function NuevoClienteConMembresia() {
           correo: correo.trim() || undefined,
           telefono: telefono.trim() || undefined,
           direccion: direccion.trim() || undefined,
-          fotografia: fotografia ?? "", // si no se guardó, enviamos ""
+          fotografia: fotografiaRuta, // ruta devuelta por el backend (o "")
           huella_base64: "", // requerido por el schema
         },
         venta: {
@@ -291,7 +303,7 @@ export default function NuevoClienteConMembresia() {
           precio_final: precioFinal.trim() === "" ? undefined : Number(precioFinal),
           sesiones_restantes:
             sesionesRestantes.trim() === "" ? undefined : Number(sesionesRestantes),
-          estado: "activa",
+          estado: "activa" as EstadoMembresia,
         },
       };
 
@@ -307,7 +319,7 @@ export default function NuevoClienteConMembresia() {
   };
 
   return (
-    <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w/full break-words">
+    <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
       <header className="flex items-center justify-between mb-3">
         <h5 className="card-title">Nuevo cliente con membresía</h5>
         <Link to="/clientes" className="btn">Volver</Link>
@@ -423,11 +435,30 @@ export default function NuevoClienteConMembresia() {
               </div>
               <div>
                 <Label htmlFor="fecha_inicio" value="Fecha inicio" />
-                <TextInput id="fecha_inicio" type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                <TextInput
+                  id="fecha_inicio"
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                  color={dateInvalid ? "failure" : undefined}
+                />
               </div>
               <div>
-                <Label htmlFor="fecha_fin" value="Fecha fin (auto +1 mes)" />
-                <TextInput id="fecha_fin" type="date" value={fechaFin} readOnly />
+                <Label htmlFor="fecha_fin" value="Fecha fin" />
+                <TextInput
+                  id="fecha_fin"
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => { setFechaFin(e.target.value); setTouchedFin(true); }}
+                  color={dateInvalid ? "failure" : undefined}
+                  helperText={
+                    dateInvalid ? (
+                      <span className="text-red-600">
+                        La fecha de fin debe ser el mismo día o posterior a la fecha de inicio.
+                      </span>
+                    ) : undefined
+                  }
+                />
               </div>
               <div>
                 <Label htmlFor="precio_final" value="Precio" />
@@ -439,6 +470,12 @@ export default function NuevoClienteConMembresia() {
                   value={precioFinal}
                   onChange={(e) => setPrecioFinal(e.target.value)}
                   placeholder="0.00"
+                  color={precioInvalid ? "failure" : undefined}
+                  helperText={
+                    precioInvalid ? (
+                      <span className="text-red-600">El precio debe ser mayor o igual a 0.</span>
+                    ) : undefined
+                  }
                 />
               </div>
               <div>
@@ -461,7 +498,7 @@ export default function NuevoClienteConMembresia() {
           </section>
 
           <div className="flex items-center gap-3">
-            <button type="submit" className="btn" disabled={saving}>
+            <button type="submit" className="btn" disabled={saving || dateInvalid || precioInvalid}>
               {saving ? (
                 <span className="inline-flex items-center gap-2">
                   <Spinner size="sm" /> Guardando…
