@@ -1,18 +1,26 @@
 // src/api/membresias_resumen.ts
 import { api } from "./apiConfig";
 
-export interface ResumenMembresia {
+export type ResumenMembresia = {
   id: number;
   foto?: string | null;
-  documento: string;
   nombre: string;
   apellido: string;
+  documento: string;
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
   precio?: number | null;
   sesiones_restantes?: number | null;
-  estado: string; 
-}
+  estado: string;
+  days_left?: number | null;
+};
+
+export type ResumenCounts = {
+  todas: number;
+  activas: number;
+  por_vencer: number;
+  vencidas: number;
+};
 
 export interface Page<T> {
   items: T[];
@@ -26,14 +34,24 @@ export interface Page<T> {
   prev?: string | null;
 }
 
-export interface PageParams {
+export type ResumenFiltro = "todas" | "activas" | "por_vencer" | "vencidas";
+
+export interface GetResumenParams {
   page?: number;
   size?: number;
   q?: string;
+  filtro?: ResumenFiltro;       // ← nuevo: filtro del backend
+  include_counts?: boolean;     // ← nuevo: para traer conteos
 }
 
-export const getResumenMembresias = (params: PageParams = {}) =>
-  api.get<Page<ResumenMembresia>>("/clientes/membresias/resumen", { params });
+export interface ResumenPage<T> extends Page<T> {
+  counts?: ResumenCounts;       // ← opcional, llega si include_counts=true
+}
 
+// 🚩 Ruta correcta del backend:
+export const getResumenMembresias = (params: GetResumenParams = {}) =>
+  api.get<ResumenPage<ResumenMembresia>>("/clientes/membresias/resumen", { params });
+
+// (opcional) detalle de la membresía actual de un cliente
 export const getMembresiaActual = (clienteId: number) =>
   api.get<ResumenMembresia>(`/clientes/${clienteId}/membresia-actual`);
