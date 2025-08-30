@@ -102,7 +102,10 @@ export default function Membresias() {
               <Table.Head>
                 <Table.HeadCell className="p-6">Nombre</Table.HeadCell>
                 <Table.HeadCell>Precio</Table.HeadCell>
-                <Table.HeadCell>Duración</Table.HeadCell>
+                <Table.HeadCell className="text-black font-semibold">
+                  Duración
+                </Table.HeadCell>
+
                 <Table.HeadCell>Sesiones</Table.HeadCell>
                 <Table.HeadCell>Accesos diarios</Table.HeadCell>
                 <Table.HeadCell></Table.HeadCell>

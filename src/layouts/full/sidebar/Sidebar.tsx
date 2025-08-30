@@ -19,8 +19,8 @@ const SidebarLayout = () => {
           className="fixed menu-sidebar  bg-white dark:bg-darkgray rtl:pe-4 rtl:ps-0 top-[72px]"
           aria-label="Sidebar with multi-level dropdown example"
         >
-          <div className="px-6 py-4 flex items-center sidebarlogo">
-            <FullLogo />
+          <div className="px-6 py-4 flex items-center bg-white">
+            <h2>MeintroLab.SAS</h2>
           </div>
           <SimpleBar className="h-[calc(100vh_-_294px)]">
             <Sidebar.Items className="px-5 mt-2">
