@@ -166,13 +166,24 @@ export default function FormClientEdit() {
           </div>
         </div>
 
+       
         {/* Botones */}
         <div className="col-span-12 flex gap-3">
           <Button color="primary" type="submit" isProcessing={loading}>
             Guardar cambios
           </Button>
+
           <Button color="gray" type="button" onClick={() => navigate("/ClientList")}>
             Cancelar
+          </Button>
+
+          {/* Nuevo botón: Editar Huella */}
+          <Button
+            color="yellow"
+            type="button"
+            onClick={() => navigate(`/HuellaController/${form.id}`)}
+          >
+            Editar Huella
           </Button>
         </div>
       </div>

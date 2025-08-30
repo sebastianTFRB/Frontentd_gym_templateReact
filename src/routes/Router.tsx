@@ -34,6 +34,8 @@ const VentaMembresiasPage =lazy(() => import('../views/ventaMembresias/ventaMemb
 const ResumenMembresias = lazy(() => import('../views/clientList/Clientes/ResumenMembresias'));
 const NuevoClienteConMembresia = lazy(() => import('../views/clientList/Clientes/NuevoClienteConMembresia'));
 const EditarClienteConMembresia = lazy(() => import('../views/clientList/Clientes/EditarClienteConMembresia'));
+const AddClient = lazy(() => import('../views/addClient/AddClient'));
+const HuellaController = lazy(() => import('../views/huellaController/HuellaController'));
 const Router = [
   {
     path: '/',
@@ -56,8 +58,8 @@ const Router = [
       { path: '/clientes/membresias', element: <ResumenMembresias /> },
       { path: '/clientes/new-with-membresia', element: <NuevoClienteConMembresia /> },
       { path: '/clientes/:id/editar-membresia', element: <EditarClienteConMembresia /> },
-      
-
+      { path: '/add-client', exact: true, element: <AddClient /> },
+      { path: '/HuellaController/:id', exact: true, element: <HuellaController /> },
       
       { path: '*', element: <Navigate to="/auth/404" /> },
     ],
