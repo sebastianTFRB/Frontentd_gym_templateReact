@@ -99,7 +99,7 @@ export default function ResumenMembresias() {
       <header className="flex items-center justify-between">
         <h5 className="card-title">Resumem membresias</h5>
       </header>
-
+    
       <SearchBar
         
         query={query}
@@ -108,6 +108,8 @@ export default function ResumenMembresias() {
           setPage(1);
         }}
       />
+
+      /clientes/new-with-membresia
 
       <div className="mt-3">
         {err ? (

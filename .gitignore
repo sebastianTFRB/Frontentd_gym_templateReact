@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Fotos locales (no versionarlas)
+public/fotos/*
+!public/fotos/.gitkeep

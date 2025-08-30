@@ -24,3 +24,4 @@ export const updateMembresia = (id: number, data: Partial<Membresia>) =>
 
 export const deleteMembresia = (id: number) =>
   api.delete(`/membresias/${id}`);
+
