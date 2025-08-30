@@ -105,7 +105,7 @@ export default function ClientesList() {
     <div>
       <header>
         <h1>GOLDEN Clientes</h1>
-        <Link to="/clientes/new">Nuevo Cliente</Link>
+        <Link to="/add-client">Nuevo Cliente</Link>
       </header>
 
       <div>

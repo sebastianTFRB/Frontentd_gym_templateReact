@@ -73,7 +73,7 @@ export default function ClientesList() {
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
       <header className="flex items-center justify-between mb-4">
         <h5 className="card-title">Clientes</h5>
-        <NavLink to="/clientes/new" className="btn">
+        <NavLink to="/add-client" className="btn">
           Nuevo Cliente
         </NavLink>
       </header>
