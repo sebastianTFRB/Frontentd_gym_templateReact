@@ -3,6 +3,7 @@ import { Table, Spinner, Badge, Dropdown, Progress } from "flowbite-react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { Icon } from "@iconify/react";
 import SearchBar from "./SearchBarsimple";
+import { Link } from "react-router-dom";
 import { getResumenMembresias, ResumenMembresia } from "../../../api/membresias_resumen";
 
 type PageData<T> = {
@@ -24,17 +25,52 @@ function formatDate(s?: string | null) {
   return d.toLocaleDateString("es-CO");
 }
 
+// ===== helpers para foto (maneja rutas relativas, absolutas y base64)
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+// quita el sufijo /api/v1 o /api/v2... para apuntar al origen del server de archivos
+const API_ORIGIN = API_BASE.replace(/\/api\/v\d+\/?$/, "");
+
+function resolveFotoSrc(src?: string | null): string | null {
+  if (!src) return null;
+  if (src.startsWith("data:")) return src; // ya viene como dataURL
+  if (/^https?:\/\//i.test(src)) return src; // URL absoluta
+  if (src.startsWith("/")) return API_ORIGIN + src; // ruta absoluta en el backend (/media/...)
+  if (src.startsWith("media/")) return `${API_ORIGIN}/${src}`; // ruta relativa (media/...)
+  // si no coincide con lo anterior, tratamos como base64 crudo
+  return `data:image/jpeg;base64,${src}`;
+}
+
 function Foto({ src }: { src?: string | null }) {
-  if (!src) {
+  const resolved = resolveFotoSrc(src);
+  if (!resolved) {
     return <div style={{ width: 40, height: 40, borderRadius: 8, background: "#2d333b" }} />;
   }
-  const isUrl = /^https?:\/\//i.test(src);
-  const dataSrc = isUrl ? src : `data:image/jpeg;base64,${src}`;
   return (
     <img
-      src={dataSrc}
+      src={resolved}
       alt="foto"
-      style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", border: "1px solid #2d333b" }}
+      onError={(e) => {
+        // Fallback simple para evitar loop
+        const el = e.currentTarget as HTMLImageElement & { __fallback?: boolean };
+        if (!el.__fallback) {
+          el.__fallback = true;
+          el.src =
+            "data:image/svg+xml;utf8," +
+            encodeURIComponent(
+              `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'>
+                 <rect width='100%' height='100%' rx='8' fill='#2d333b'/>
+               </svg>`
+            );
+        }
+      }}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        objectFit: "cover",
+        border: "1px solid #2d333b",
+      }}
     />
   );
 }
@@ -97,19 +133,19 @@ export default function ResumenMembresias() {
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
       <header className="flex items-center justify-between">
-        <h5 className="card-title">Resumem membresias</h5>
+        <h5 className="card-title">Resumen de membresías</h5>
+        <Link to="/clientes/new-with-membresia" className="btn">
+          + Nuevo
+        </Link>
       </header>
-    
+
       <SearchBar
-        
         query={query}
         onChange={(val: string) => {
           setQuery(val);
           setPage(1);
         }}
       />
-
-      /clientes/new-with-membresia
 
       <div className="mt-3">
         {err ? (
@@ -148,14 +184,12 @@ export default function ResumenMembresias() {
                       </Table.Cell>
 
                       <Table.Cell className="whitespace-nowrap ps-6">
-                        
-                          
-                            <h5 className="text-base text-wrap">
-                              {r.nombre} {r.apellido}
-                            </h5>
-                          
-                          <div className="text-sm font-medium text-dark opacity-70 mb-2 text-wrap">CC. {r.documento}</div>
-                        
+                        <h5 className="text-base text-wrap">
+                          <Link to={`/clientes/${r.id}/editar-membresia`} className="hover:underline">
+                            {r.nombre} {r.apellido}
+                          </Link>
+                        </h5>
+                        <div className="text-sm font-medium text-dark opacity-70 mb-2 text-wrap">CC. {r.documento}</div>
                       </Table.Cell>
 
                       <Table.Cell className="whitespace-nowrap ps-6">
