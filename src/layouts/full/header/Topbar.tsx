@@ -44,7 +44,7 @@ const Topbar: React.FC = () => {
               {/* Botón que ejecuta el POST */}
               <button
                 onClick={handleOpenCommand}
-                className="flex items-center px-4 py-[11px] rounded-[4px] gap-2 text-white bg-[#c99700] hover:bg-[#5d87ff]"
+                className="flex items-center px-4 py-[11px] rounded-[4px] gap-2 text-white bg-[#c99700] "
               >
                 <Icon icon="material-symbols-light:door-open-outline" width={25} />
                 <h4 className="text-base font-normal leading-none text-white">Abrir puerta</h4>

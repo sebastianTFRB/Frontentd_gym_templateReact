@@ -2,6 +2,19 @@
 
 /* ===== Light (por defecto) ===== */
 :root {
+
+    /* Tonos dorados */
+  --gold-300: #e7c873;  /* brillo */
+  --gold-400: #dbb954;
+  --gold-500: #d4af37;  /* “gold” clásico */
+  --gold-600: #c9a227;
+  --gold-700: #8c6c1a;  /* sombra */
+  --gold-900: #4a3a11;  /* muy oscuro */
+
+   /* Extras para efectos */
+  --gold-glow: 0 14px 28px -10px rgba(212, 175, 55, .45);
+  --gold-ring: rgba(212, 175, 55, .35);
+
   /* Paleta Golden's */
   --color-primary: #f0c019;            /* Dorado principal */
   --color-primary-emphasis: #ffd84d;   /* Dorado + brillo para hover/enfasis */

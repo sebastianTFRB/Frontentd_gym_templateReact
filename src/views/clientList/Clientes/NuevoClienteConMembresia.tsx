@@ -4,6 +4,7 @@ import { Spinner } from "flowbite-react";
 import { Icon } from "@iconify/react";
 import { createClienteConMembresia } from "../../../api/clientes_membresia";
 import { getMembresias } from "../../../api/membresias";
+import { API_BASE_URL } from "../../../api/apiConfig";
 
 // ===== Helpers de fecha
 function todayStr() {
@@ -22,8 +23,7 @@ function addMonthsStr(isoDate: string, months: number) {
 }
 
 // ===== Subir foto al backend
-const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+const API_BASE = API_BASE_URL;
 
 function b64ToBlob(b64: string, mime = "image/jpeg"): Blob {
   const bin = atob(b64);
@@ -176,7 +176,7 @@ export default function NuevoClienteConMembresia() {
     const v = videoRef.current;
     const stream = mediaStreamRef.current;
     if (!v || !stream) return;
-    v.srcObject = stream as any;
+    (v as any).srcObject = stream;
     v.muted = true;
     const onLoaded = () => setVideoReady(true);
     v.addEventListener("loadedmetadata", onLoaded);
@@ -213,7 +213,7 @@ export default function NuevoClienteConMembresia() {
   const stopCamera = () => {
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
+    if (videoRef.current) (videoRef.current as any).srcObject = null;
     setCamOn(false);
   };
 
@@ -249,9 +249,11 @@ export default function NuevoClienteConMembresia() {
     return Number.isNaN(n) || n < 0;
   }, [precioFinal]);
 
-  // ===== Clases input del template (con borde rojo si hay error)
+  // ===== Clases input del template
   const baseInput =
-    "block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900 focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg";
+    "block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900 " +
+    "focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white " +
+    "dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg";
 
   // Submit
   const onSubmit = async (e: React.FormEvent) => {
@@ -280,10 +282,9 @@ export default function NuevoClienteConMembresia() {
     try {
       let fotografiaRuta = "";
 
-      // Si hay foto, súbela primero al backend y obtén la 'ruta'
       if (fotoBase64) {
         const ruta = await uploadBase64ToBackend(documento.trim(), fotoBase64, "image/jpeg");
-        fotografiaRuta = ruta; // p.ej. "/media/fotos/123.jpg"
+        fotografiaRuta = ruta;
         setInfo("Foto subida correctamente.");
       }
 
@@ -306,7 +307,7 @@ export default function NuevoClienteConMembresia() {
           precio_final: precioFinal.trim() === "" ? undefined : Number(precioFinal),
           sesiones_restantes:
             sesionesRestantes.trim() === "" ? undefined : Number(sesionesRestantes),
-          estado: "activa" as EstadoMembresia,
+          estado: "Activa" as EstadoMembresia,
         },
       };
 
@@ -323,14 +324,20 @@ export default function NuevoClienteConMembresia() {
 
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-      {/* Header con botón Volver estilo template */}
+      {/* Header */}
       <header className="flex items-center justify-between mb-4">
         <h5 className="card-title">Nuevo cliente con membresía</h5>
 
+        {/* Volver (neutro) */}
         <Link
           to="/clientes/membresias"
           role="button"
-          className="flex items-center justify-center px-4 py-3 gap-2 text-[15px] leading-[normal] font-normal text-white dark:text-white bg-primary rounded-xl hover:text-white hover:bg-primary dark:hover:text-white shadow-btnshdw"
+          className="flex items-center justify-center px-4 py-3 gap-3 text-[15px]
+                     leading-[normal] font-medium text-black
+                     bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                     rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
+                     focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
         >
           <Icon icon="solar:alt-arrow-left-outline" width="18" height="18" />
           <span>Volver</span>
@@ -476,7 +483,11 @@ export default function NuevoClienteConMembresia() {
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90"
+                  className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-black
+                             bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                             shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                             hover:brightness-[1.03] transition-all focus:outline-none
+                             focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
                 >
                   <Icon icon="solar:camera-outline" width="18" height="18" />
                   Abrir cámara
@@ -492,14 +503,18 @@ export default function NuevoClienteConMembresia() {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full max-w-md rounded-xl border aspect-video bg-black"
+                  className="w-full max-w-md rounded-xl border aspect-video bg-black ring-2 ring-[var(--color-gold-start,#FFD54A)]/40"
                 />
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={takePhoto}
                     disabled={!videoReady}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-black
+                               bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                               shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                               hover:brightness-[1.03] disabled:opacity-50 transition-all
+                               focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
                   >
                     <Icon icon="solar:square-round-check-outline" width="18" height="18" />
                     Tomar foto
@@ -507,7 +522,7 @@ export default function NuevoClienteConMembresia() {
                   <button
                     type="button"
                     onClick={stopCamera}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                   >
                     <Icon icon="solar:close-circle-outline" width="18" height="18" />
                     Cancelar
@@ -522,13 +537,13 @@ export default function NuevoClienteConMembresia() {
                 <img
                   src={`data:image/jpeg;base64,${fotoBase64}`}
                   alt="preview"
-                  className="h-32 w-32 object-cover rounded-xl border"
+                  className="h-32 w-32 object-cover rounded-xl border ring-2 ring-[var(--color-gold-start,#FFD54A)]/40"
                 />
                 <div className="flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={clearPhoto}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                   >
                     <Icon icon="solar:refresh-outline" width="18" height="18" />
                     Cambiar foto
@@ -654,7 +669,11 @@ export default function NuevoClienteConMembresia() {
             <button
               type="submit"
               disabled={saving || dateInvalid || precioInvalid}
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-black
+                         bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                         shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                         hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed
+                         focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
             >
               {saving ? (
                 <>
