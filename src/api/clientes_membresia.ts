@@ -69,8 +69,8 @@ export function createClienteConMembresia(payload: ClienteMembresiaPayload) {
   return api.post("/clientes/with-membresia", payload);
 }
 
-// UPDATE: tu ruta real es /api/v1/clientes/clientes/{id}/with-membresia (doble 'clientes')
+// UPDATE: tu ruta real es /api/v1/clientes/{id}/with-membresia (doble 'clientes')
 export const updateClienteConMembresia = (
   clienteId: number,
   payload: ActualizarClienteYVentaRequest
-) => api.put(`/clientes/clientes/${clienteId}/with-membresia`, payload);
+) => api.put(`/clientes/${clienteId}/with-membresia`, payload);

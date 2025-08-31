@@ -9,6 +9,7 @@ import {
   ResumenFiltro,
   ResumenPage,
 } from "../../../api/membresias_resumen";
+import { API_BASE_URL } from "../../../api/apiConfig";
 
 // ================== helpers comunes ==================
 function formatDate(s?: string | null) {
@@ -19,8 +20,7 @@ function formatDate(s?: string | null) {
 }
 
 // ===== helpers para foto (maneja rutas relativas, absolutas y base64)
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
-// quita el sufijo /api/v1 o /api/v2... para apuntar al origen del server de archivos
+const API_BASE = API_BASE_URL;
 const API_ORIGIN = API_BASE.replace(/\/api\/v\d+\/?$/, "");
 
 function resolveFotoSrc(src?: string | null): string | null {
@@ -36,7 +36,12 @@ function resolveFotoSrc(src?: string | null): string | null {
 function Foto({ src }: { src?: string | null }) {
   const resolved = resolveFotoSrc(src);
   if (!resolved) {
-    return <div style={{ width: 40, height: 40, borderRadius: 8, background: "#2d333b" }} />;
+    return (
+      <div
+        className="w-10 h-10 rounded-lg bg-[#2d333b] ring-2 ring-[var(--color-gold-start,#FFD54A)]/40"
+        aria-hidden
+      />
+    );
   }
   return (
     <img
@@ -55,13 +60,7 @@ function Foto({ src }: { src?: string | null }) {
             );
         }
       }}
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: 8,
-        objectFit: "cover",
-        border: "1px solid #2d333b",
-      }}
+      className="w-10 h-10 rounded-lg object-cover border border-[#2d333b] ring-2 ring-[var(--color-gold-start,#FFD54A)]/40"
     />
   );
 }
@@ -82,10 +81,8 @@ function clamp0to100(n: number) {
 }
 
 /**
- * Calcula:
- *  - progress = (días_restantes / total_días) * 100 (decrece con el tiempo)
- *  - color: ≤5 red, 6–10 yellow, >10 green, "dark" si no hay fechas válidas
- *  - daysLeft: días restantes (>= 0)
+ * progress = (días_restantes / total_días) * 100
+ * color: ≤5 red, 6–10 yellow, >10 green, "dark" si no hay fechas válidas
  */
 function progressByRemainingDays(
   fecha_inicio?: string | null,
@@ -161,11 +158,6 @@ export default function ResumenMembresias() {
   const totalItems = pageData?.total ?? 0;
   const counts = pageData?.counts ?? { todas: 0, activas: 0, por_vencer: 0, vencidas: 0 };
 
-  const tableActionData = [
-    { icon: "solar:add-circle-outline", listtitle: "Add" },
-    { icon: "solar:pen-new-square-broken", listtitle: "Edit" },
-  ];
-
   const badgeColor = (estado: string): "success" | "failure" | "gray" | "info" => {
     const e = (estado || "").toLowerCase();
     if (e === "activa") return "success";
@@ -174,9 +166,11 @@ export default function ResumenMembresias() {
     return "info";
   };
 
-  // estilos pills filtro
-  const pillBase = "px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors";
-  const pillActive = "bg-primary text-white border-primary shadow-btnshdw";
+  // ===== estilos pills filtro (brand dorado)
+  const pillBase =
+    "px-3 py-1.5 rounded-xl text-sm font-medium border transition-all";
+  const pillActive =
+    "text-black border-transparent bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)] shadow-[0_10px_18px_-10px_rgba(247,181,0,.45)]";
   const pillInactive =
     "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600";
 
@@ -185,20 +179,20 @@ export default function ResumenMembresias() {
       <header className="flex items-center justify-between gap-3 flex-wrap">
         <h5 className="card-title">Resumen de membresías</h5>
 
-        {/* Acciones derecha */}
-        <div className="flex items-center gap-2">
-          {/* Botón "+ Nuevo" con el estilo del template */}
-          <Link
-            to="/clientes/new-with-membresia"
-            role="button"
-            className="flex items-center justify-center px-4 py-3 gap-3 text-[15px] leading-[normal] font-normal text-white dark:text-white bg-primary rounded-xl hover:text-white hover:bg-primary dark:hover:text-white shadow-btnshdw"
-          >
-            <span className="flex gap-3 items-center">
-              <Icon icon="solar:add-circle-outline" width="18" height="18" />
-              <span className="max-w-24 truncate">Nuevo</span>
-            </span>
-          </Link>
-        </div>
+        {/* Botón "+ Nuevo" con gradiente dorado */}
+        <Link
+          to="/clientes/new-with-membresia"
+          role="button"
+          className="flex items-center justify-center px-4 py-3 gap-3 text-[15px]
+                     leading-[normal] font-medium text-black
+                     bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                     rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
+                     focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
+        >
+          <Icon icon="solar:add-circle-outline" width="18" height="18" />
+          <span>Nuevo</span>
+        </Link>
       </header>
 
       {/* Filtros + Search */}
@@ -213,7 +207,7 @@ export default function ResumenMembresias() {
             }}
             type="button"
           >
-            Todas 
+            Todas
           </button>
           <button
             className={`${pillBase} ${filter === "activas" ? pillActive : pillInactive}`}
@@ -223,7 +217,7 @@ export default function ResumenMembresias() {
             }}
             type="button"
           >
-            Activas 
+            Activas
           </button>
           <button
             className={`${pillBase} ${filter === "por_vencer" ? pillActive : pillInactive}`}
@@ -233,7 +227,7 @@ export default function ResumenMembresias() {
             }}
             type="button"
           >
-            Por vencer (≤5d) 
+            Por vencer ≤ 5 días
           </button>
           <button
             className={`${pillBase} ${filter === "vencidas" ? pillActive : pillInactive}`}
@@ -261,7 +255,9 @@ export default function ResumenMembresias() {
                 }}
                 placeholder="Buscar…"
                 aria-label="Buscar"
-                className="block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900 focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg"
+                className="block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900
+                           focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white
+                           dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg"
               />
             </div>
           </div>
@@ -297,7 +293,6 @@ export default function ResumenMembresias() {
                       ? Number(r.precio).toLocaleString("es-CO", { style: "currency", currency: "COP" })
                       : "—";
 
-                  // progreso y días restantes (si backend manda days_left, lo usamos para mostrar)
                   const { progress, color, daysLeft } = progressByRemainingDays(
                     r.fecha_inicio as any,
                     r.fecha_fin as any
@@ -308,7 +303,10 @@ export default function ResumenMembresias() {
                       : daysLeft;
 
                   return (
-                    <Table.Row key={r.id}>
+                    <Table.Row
+                      key={r.id}
+                      className="hover:bg-[rgba(255,213,74,0.06)] transition-colors"
+                    >
                       <Table.Cell>{r.id}</Table.Cell>
 
                       <Table.Cell>
@@ -381,14 +379,17 @@ export default function ResumenMembresias() {
               </Table.Body>
             </Table>
 
-            {/* Paginación con iconos */}
+            {/* Paginación con iconos y dorado */}
             {totalPages > 1 && (
               <nav className="mt-4 flex items-center justify-between md:justify-end gap-3" aria-label="Paginación">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl
+                             bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                             text-black shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                             hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Anterior"
                 >
                   <Icon icon="solar:alt-arrow-left-outline" width="18" height="18" />
@@ -396,7 +397,8 @@ export default function ResumenMembresias() {
                 </button>
 
                 <span className="text-sm text-gray-600 dark:text-gray-300">
-                  Página <span className="font-semibold">{page}</span> de <span className="font-semibold">{totalPages}</span>
+                  Página <span className="font-semibold">{page}</span> de{" "}
+                  <span className="font-semibold">{totalPages}</span>
                   <span className="ml-2 inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs">
                     Total: {totalItems}
                   </span>
@@ -406,7 +408,10 @@ export default function ResumenMembresias() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl
+                             bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                             text-black shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                             hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Siguiente"
                 >
                   <span className="hidden sm:inline">Siguiente</span>

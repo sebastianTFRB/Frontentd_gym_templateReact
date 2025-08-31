@@ -106,6 +106,10 @@
   color: var(--color-primary);
 }
 
+.nav-link svg circle:first-child {
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.12));
+}
+
 /* ==== Dark mode (usa class="dark" en <html> o <body>) ==== */
 .dark .menu-sidebar {
   background: var(--color-darkgray);
