@@ -213,7 +213,7 @@ export default function ResumenMembresias() {
             }}
             type="button"
           >
-            Todas <span className="ml-1 text-xs opacity-75">({counts.todas})</span>
+            Todas 
           </button>
           <button
             className={`${pillBase} ${filter === "activas" ? pillActive : pillInactive}`}
@@ -223,7 +223,7 @@ export default function ResumenMembresias() {
             }}
             type="button"
           >
-            Activas <span className="ml-1 text-xs opacity-75">({counts.activas})</span>
+            Activas 
           </button>
           <button
             className={`${pillBase} ${filter === "por_vencer" ? pillActive : pillInactive}`}
@@ -233,7 +233,7 @@ export default function ResumenMembresias() {
             }}
             type="button"
           >
-            Por vencer ≤5d <span className="ml-1 text-xs opacity-75">({counts.por_vencer})</span>
+            Por vencer (≤5d) 
           </button>
           <button
             className={`${pillBase} ${filter === "vencidas" ? pillActive : pillInactive}`}
@@ -243,7 +243,7 @@ export default function ResumenMembresias() {
             }}
             type="button"
           >
-            Vencidas <span className="ml-1 text-xs opacity-75">({counts.vencidas})</span>
+            Vencidas
           </button>
         </div>
 

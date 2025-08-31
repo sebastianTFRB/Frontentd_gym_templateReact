@@ -1,89 +1,125 @@
+/* ==== Sidebar / Minisidebar (Golden's theme) ==== */
+
+/* Barra vertical mini (íconos) */
 .minisidebar-icon {
-    position: fixed;
-    left: 0;
-    height: 100%;
-    top: 0;
-    background-color: #006eff;
-    width: 80px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 80px;
+
+  /* antes: #006eff */
+  background: var(--color-primary); /* dorado */
+  /* opcional con brillo leve:
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-emphasis) 100%);
+  */
+  box-shadow: inset -1px 0 0 var(--color-border);
 }
 
-
+/* Contenedor principal del menú */
 .menu-sidebar {
-    height: 100%;
-    width: 256px !important;
-    background: var(--bs-white);
-    top: 0;
-    left: 0px;
-    transition: left .4s ease-in-out;
+  height: 100%;
+  width: 256px !important;
+  top: 0;
+  left: 0;
+  background: var(--color-surface-ld);   /* antes: var(--bs-white) */
+  border-right: 1px solid var(--color-border);
+  transition: left .4s ease-in-out, background-color .2s ease-in-out, border-color .2s ease-in-out;
 }
 
-
+/* Secciones / captions */
 .sidebar-nav .caption {
-    padding-top: 20px !important;
-    margin-top: 20px !important;
-    border-top: 1px solid var(--color-border);
+  padding-top: 20px !important;
+  margin-top: 20px !important;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-bodytext);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  font-size: 12px;
+  opacity: .85;
 }
-
-
 .sidebar-nav .caption:first-child {
-    padding-top: 0 !important;
-    margin-top: 0px !important;
-    border-top: 0 !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  border-top: 0 !important;
 }
 
-
+/* Items / dropdowns */
 .sidebar-dropdown li a {
-    opacity: 0.9;
-    padding: 8px 16px;
-    box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 8px 16px;
+  color: var(--color-bodytext);
+  text-decoration: none;
+  background-color: transparent !important; /* elimina color de fondo */
+  opacity: .9;
+  transition: color .15s ease, opacity .15s ease, background-color .15s ease;
+  box-shadow: none !important;
 }
-
-
-.sidebar-dropdown li a.active {
-    opacity: 1;
-    color: var(--color-primary) !important;
-} 
-
-
-.sidebar-dropdown li a {
-    background-color: transparent !important;
-}
-
 .sidebar-dropdown li a:hover {
-    background-color: transparent !important;
-    opacity: 1;
+  opacity: 1;
+  color: var(--color-primary);                 /* dorado al hover */
+  background-color: var(--color-lightprimary); /* leve tinte */
+  border-radius: 10px;
+}
+.sidebar-dropdown li a.active {
+  opacity: 1;
+  color: var(--color-primary) !important;
+  background-color: var(--color-lightprimary);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 10px;
+  padding-left: 13px; /* compensa el borde */
 }
 
-
+/* Botones dentro del dropdown (si los hay) */
 .sidebar-dropdown li button:hover {
-    background-color: transparent !important;
+  background-color: transparent !important;
 }
 
-
+/* Puntitos / iconitos mini */
 .sidebar-dropdown li .iconify--fad {
-    height: 9px;
-    width: 9px;
-    margin: 0 4px;
+  width: 9px;
+  height: 9px;
+  margin: 0 4px;
 }
 
-
-
-.barnd-logo{
-    min-height: 72px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* Logo/brand */
+.barnd-logo {
+  min-height: 72px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-
-.nav-link{
-display: block;
-font-size: 14px;
-color: #98a4ae;
-text-decoration: none;
-background: 0 0;
-border: 0;
-transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
+/* Enlaces genéricos en el sidebar */
+.nav-link {
+  display: block;
+  font-size: 14px;
+  color: var(--color-bodytext);  /* antes: #98a4ae */
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  transition: color .15s ease, background-color .15s ease, border-color .15s ease;
+}
+.nav-link:hover {
+  color: var(--color-primary);
 }
 
-
+/* ==== Dark mode (usa class="dark" en <html> o <body>) ==== */
+.dark .menu-sidebar {
+  background: var(--color-darkgray);
+  border-right-color: var(--color-darkborder);
+}
+.dark .sidebar-nav .caption {
+  color: var(--color-bodytext);
+  opacity: .9;
+}
+.dark .sidebar-dropdown li a {
+  color: var(--color-bodytext);
+}
+.dark .sidebar-dropdown li a:hover,
+.dark .sidebar-dropdown li a.active {
+  background-color: var(--color-lightprimary);
+  color: var(--color-primary);
+}

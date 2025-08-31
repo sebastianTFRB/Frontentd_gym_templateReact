@@ -100,22 +100,22 @@ const SidebarContent: MenuItem[] = [
       // },
     ],
   },
-  {
-    heading: "Reguisitros",
-    children: [
-      {
-        name: "Venta de Membresias",
-        icon: "solar:user-plus-broken",
-        id: uniqueId(),
-        url: "/VentaMembresia",
-        isPro: false,
+  // {
+  //   heading: "Reguisitros",
+  //   children: [
+  //     {
+  //       name: "Venta de Membresias",
+  //       icon: "solar:user-plus-broken",
+  //       id: uniqueId(),
+  //       url: "/VentaMembresia",
+  //       isPro: false,
 
-      },
+  //     },
       
        
       
-    ],
-  },
+  //   ],
+  // },
   // {
   //   heading: "Apps",
   //   children: [
