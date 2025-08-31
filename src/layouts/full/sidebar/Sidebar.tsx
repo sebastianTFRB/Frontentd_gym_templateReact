@@ -5,7 +5,6 @@ import NavItems from "./NavItems";
 // @ts-ignore
 import SimpleBar from "simplebar-react";
 import React from "react";
-import FullLogo from "../shared/logo/FullLogo";
 // import Upgrade from "./Upgrade";
 import NavCollapse from "./NavCollapse";
 
@@ -16,7 +15,7 @@ const SidebarLayout = () => {
     <>
       <div className="xl:block hidden">
         <Sidebar
-          className="fixed menu-sidebar  bg-white dark:bg-darkgray rtl:pe-4 rtl:ps-0 top-[72px]"
+          className="fixed menu-sidebar  bg-white dark:bg-darkgray rtl:pe-4 rtl:ps-0 top-[90px]"
           aria-label="Sidebar with multi-level dropdown example"
         >
           <div className="px-6 py-4 flex items-center bg-white">

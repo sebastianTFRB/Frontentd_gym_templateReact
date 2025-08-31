@@ -8,5 +8,4 @@ createRoot(document.getElementById('root')!).render(
     <Suspense>
         <App />
     </Suspense>
-    ,
 )

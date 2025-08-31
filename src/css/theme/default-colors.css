@@ -1,10 +1,80 @@
+/* /src/css/theme/default-colors.css */
+
+/* ===== Light (por defecto) ===== */
 :root {
-      --color-primary: #a41515;           /* Dorado principal */
-    --color-primary-emphasis: #ffe41c;  /* Dorado brillante para énfasis */
-    --color-secondary: #000000;         /* Blanco para textos sobre negro */
-    --color-secondary-emphasis: #f8c20a; /* Amarillo brillante de apoyo */
-    --color-lightprimary: #d3a50940;    /* Dorado transparente / light */
-    --color-lightsecondary: #f8c20a40;  /* Amarillo claro / light */
+  /* Paleta Golden's */
+  --color-primary: #f0c019;            /* Dorado principal */
+  --color-primary-emphasis: #ffd84d;   /* Dorado + brillo para hover/enfasis */
+  --color-secondary: #0b0b0b;          /* Negro profundo (textos/ fonditos) */
+  --color-secondary-emphasis: #212121; /* Negro elevado para hovers */
+
+  /* Tintes/transparentes */
+  --color-lightprimary: #f0c01940;
+  --color-lightsecondary: #ffd84d40;
+
+  /* Estados */
+  --color-info: #46caeb;
+  --color-success: #36c96c;
+  --color-warning: #f8c20a;            /* Amarillo advertencia */
+  --color-error: #ff6692;
+
+  --color-lightsuccess: #2ea95c40;
+  --color-lighterror: #ff669260;
+  --color-lightinfo: #46caeb40;
+  --color-lightwarning: #f8c20a40;
+
+  /* Superficies y texto */
+  --color-white: #ffffff;
+  --color-surface-ld: #ffffff;         /* tarjetas/fondos claros */
+  --color-bodytext: #98a4ae;
+
+  /* Bordes */
+  --color-border: #e7dcc0;             /* borde con tinte dorado muy sutil */
+  --color-bordergray: #f3f3f4;
+  --color-lighthover: #fff8e1;         /* hover claro cálido */
+
+  /* “Dark” del tema (para componentes que lo usan) */
+  --color-dark: #1f2a3d;
+  --color-darkmuted: #2a3851;
+  --color-darklink: #29343d;
+  --color-darkborder: #333f55;
+  --color-darkgray: #0f1115;
+
+  /* Otros */
+  --color-link: #2a3547;
+  --color-muted: #eff4fa;
+  --color-sky: #0a2540;
+
+  /* Énfasis (para badges/tones) */
+  --color-error-emphasis: #d9577c;
+  --color-warning-emphasis: #d3a509;
+  --color-success-emphasis: #2ea95c;
+  --color-info-emphasis: #3cacc8;
+}
+
+/* ===== Dark mode (cuando el <html> o <body> tenga class="dark") ===== */
+.dark :root {
+  --color-surface-ld: #0b0b0b;         /* fondo tarjetas oscuro */
+  --color-bodytext: #c9d1d9;
+
+  --color-border: #2a2a2a;
+  --color-bordergray: #1e1e1e;
+  --color-lighthover: #161616;
+
+  /* dorados un poco más cálidos en dark */
+  --color-primary: #f5c62b;
+  --color-primary-emphasis: #ffdf6b;
+  --color-lightprimary: #f5c62b33;
+}
+
+/* 
+:root {
+      --color-primary: #a41515;          
+    --color-primary-emphasis: #ffe41c;  
+    --color-secondary: #000000;        
+    --color-secondary-emphasis: #f8c20a; 
+    --color-lightprimary: #d3a50940;    
+    --color-lightsecondary: #f8c20a40;  
     --color-info: #46CAEB;
     --color-success: #36c96c;
     --color-warning: #f8c20a;
@@ -32,7 +102,7 @@
     --color-info-emphasis: #3cacc8;
     --color-surface-ld: #ffffff;
     --color-bodytext: #98A4AE;
-}
+} */
 /*
 :root {
     --color-primary: #635BFF;
