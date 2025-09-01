@@ -4,7 +4,7 @@ import { Cliente, getClientes, deleteCliente } from "../../../api/clientes";
 import { Table, Badge, Dropdown, Spinner } from "flowbite-react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { Icon } from "@iconify/react";
-
+import { API_BASE_URL } from "../../../api/apiConfig";
 // ================== tipos ==================
 type PageData<T> = {
   items: T[];
@@ -19,8 +19,7 @@ type PageData<T> = {
 };
 
 // ================== helpers de imagen (mismo patrón del otro listado) ==================
-const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+const API_BASE = API_BASE_URL
 const API_ORIGIN = API_BASE.replace(/\/api\/v\d+\/?$/, "");
 
 function resolveFotoSrc(src?: string | null): string | null {
