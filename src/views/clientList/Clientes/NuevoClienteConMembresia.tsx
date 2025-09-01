@@ -143,23 +143,26 @@ export default function NuevoClienteConMembresia() {
 
   // Cargar membresías
   useEffect(() => {
-    let mounted = true;
-    setLoadingCat(true);
-    getMembresias()
-      .then((res) => {
-        if (!mounted) return;
-        const arr = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        setMembresias(arr);
-      })
-      .catch((e) => {
-        console.error(e);
-        if (mounted) setError("No se pudieron cargar las membresías.");
-      })
-      .finally(() => mounted && setLoadingCat(false));
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  let mounted = true;
+  setLoadingCat(true);
+
+  getMembresias()
+    .then((res) => {
+      if (!mounted) return;
+      // res.data ya es Membresia[]
+      setMembresias(res.data);
+    })
+    .catch((e) => {
+      console.error(e);
+      if (mounted) setError("No se pudieron cargar las membresías.");
+    })
+    .finally(() => mounted && setLoadingCat(false));
+
+  return () => {
+    mounted = false;
+  };
+}, []);
+
 
   // Autocompletar desde membresía
   useEffect(() => {
@@ -256,71 +259,94 @@ export default function NuevoClienteConMembresia() {
     "dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg";
 
   // Submit
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setInfo(null);
+  const onSubmit = async (e: React.FormEvent) => { 
+  e.preventDefault();
+  setError(null);
+  setInfo(null);
 
-    if (dateInvalid) {
-      setError("La fecha de fin no puede ser anterior a la fecha de inicio.");
-      return;
+  if (dateInvalid) {
+    setError("La fecha de fin no puede ser anterior a la fecha de inicio.");
+    return;
+  }
+  if (precioInvalid) {
+    setError("El precio debe ser un número mayor o igual a 0.");
+    return;
+  }
+  if (!nombre.trim() || !apellido.trim() || !documento.trim()) {
+    setError("Nombre, apellido y documento son obligatorios.");
+    return;
+  }
+  if (idMembresia === "") {
+    setError("Selecciona una membresía.");
+    return;
+  }
+
+  setSaving(true);
+  try {
+    let fotografiaRuta = "";
+
+    if (fotoBase64) {
+      const ruta = await uploadBase64ToBackend(
+        documento.trim(),
+        fotoBase64,
+        "image/jpeg"
+      );
+      fotografiaRuta = ruta;
+      setInfo("Foto subida correctamente.");
     }
-    if (precioInvalid) {
-      setError("El precio debe ser un número mayor o igual a 0.");
-      return;
-    }
-    if (!nombre.trim() || !apellido.trim() || !documento.trim()) {
-      setError("Nombre, apellido y documento son obligatorios.");
-      return;
-    }
-    if (idMembresia === "") {
-      setError("Selecciona una membresía.");
-      return;
-    }
 
-    setSaving(true);
-    try {
-      let fotografiaRuta = "";
+    const payload: ClienteMembresiaPayload = {
+      cliente: {
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+        documento: documento.trim(),
+        ...(fechaNacimiento ? { fecha_nacimiento: fechaNacimiento } : {}),
+        correo: correo.trim() || undefined,
+        telefono: telefono.trim() || undefined,
+        direccion: direccion.trim() || undefined,
+        fotografia: fotografiaRuta,
+        huella_base64: "",
+      },
+      venta: {
+        id_membresia: Number(idMembresia),
+        fecha_inicio: fechaInicio || undefined,
+        fecha_fin: fechaFin || undefined,
+        precio_final:
+          precioFinal.trim() === "" ? undefined : Number(precioFinal),
+        sesiones_restantes:
+          sesionesRestantes.trim() === ""
+            ? undefined
+            : Number(sesionesRestantes),
+        estado: "Activa" as EstadoMembresia,
+      },
+    };
 
-      if (fotoBase64) {
-        const ruta = await uploadBase64ToBackend(documento.trim(), fotoBase64, "image/jpeg");
-        fotografiaRuta = ruta;
-        setInfo("Foto subida correctamente.");
-      }
+   
 
-      const payload: ClienteMembresiaPayload = {
-        cliente: {
-          nombre: nombre.trim(),
-          apellido: apellido.trim(),
-          documento: documento.trim(),
-          ...(fechaNacimiento ? { fecha_nacimiento: fechaNacimiento } : {}),
-          correo: correo.trim() || undefined,
-          telefono: telefono.trim() || undefined,
-          direccion: direccion.trim() || undefined,
-          fotografia: fotografiaRuta,
-          huella_base64: "",
-        },
-        venta: {
-          id_membresia: Number(idMembresia),
-          fecha_inicio: fechaInicio || undefined,
-          fecha_fin: fechaFin || undefined,
-          precio_final: precioFinal.trim() === "" ? undefined : Number(precioFinal),
-          sesiones_restantes:
-            sesionesRestantes.trim() === "" ? undefined : Number(sesionesRestantes),
-          estado: "Activa" as EstadoMembresia,
-        },
-      };
+    // Suponiendo que el backend devuelve el id del cliente creado en response.cliente.id
+    const res = await createClienteConMembresia(payload); // 👈 capturamos la respuesta
+    console.log("Respuesta createClienteConMembresia:", res.data);
 
-      await createClienteConMembresia(payload);
+    // ✅ extraemos el id del cliente (asumiendo que la respuesta trae { cliente: {...}, venta: {...} })
+    const clienteId = res.data?.cliente?.id;
+
+    if (clienteId) {
+      navigate(`/HuellaController/${clienteId}`);
+    } else {
+      // fallback si no devuelve id → lo dejamos como antes
       navigate("/clientes/membresias");
-    } catch (e: any) {
-      console.error(e);
-      const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
-      setError(String(msg));
-    } finally {
-      setSaving(false);
     }
-  };
+
+  } catch (e: any) {
+    console.error(e);
+    const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
+    setError(String(msg));
+  } finally {
+    setSaving(false);
+  }
+};
+
+     
 
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">

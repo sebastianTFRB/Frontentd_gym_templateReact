@@ -1,7 +1,7 @@
 // src/pages/Clientes/EditarClienteConMembresia.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Spinner } from "flowbite-react";
+import { Button, Spinner } from "flowbite-react";
 import { Icon } from "@iconify/react";
 
 import { getCliente, Cliente } from "../../../api/clientes";
@@ -240,10 +240,10 @@ export default function EditarClienteConMembresia() {
   const [touchedFin, setTouchedFin] = useState(false); // 👈 evita sobreescribir si el usuario la cambió
   const [precioFinal, setPrecioFinal] = useState<string>("");
   const [sesionesRestantes, setSesionesRestantes] = useState<string>("");
-  const estado: EstadoMembresia = "Activa";
+  const estado: EstadoMembresia = "activa";
 
   /* ===== Cargar datos ===== */
-  useEffect(() => {
+   /* useEffect(() => {
     let mounted = true;
     setLoading(true);
     setError(null);
@@ -302,8 +302,91 @@ export default function EditarClienteConMembresia() {
 
     return () => { mounted = false; };
   }, [clienteId]);
+*/
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
 
-  // Fecha fin auto +1 mes (solo si no la tocó manualmente)
+    Promise.all([getCliente(clienteId), getVentasMembresia(), getMembresias()])
+      .then(([cliRes, ventasRes, membRes]) => {
+        if (!mounted) return;
+
+        // ----- Cliente -----
+        const c = cliRes.data as Cliente;
+        setCliente(c);
+        setNombre(c.nombre ?? "");
+        setApellido(c.apellido ?? "");
+        setDocumento(c.documento ?? "");
+        setCorreo(c.correo ?? "");
+        setTelefono(c.telefono ?? "");
+        setDireccion(c.direccion ?? "");
+
+        // Fecha nacimiento
+        if (c.fecha_nacimiento) {
+          const d = new Date(c.fecha_nacimiento);
+          if (!Number.isNaN(d.getTime())) {
+            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            setFechaNacimiento(iso);
+          }
+        }
+
+        // Foto
+        const fotoDb = (c as any).fotografia || (c as any).foto || null;
+        setFotoRutaActual(fotoDb);
+
+        // ----- Ventas -----
+        const ventas = (Array.isArray(ventasRes.data)
+          ? ventasRes.data
+          : (ventasRes.data as any)?.data ?? []) as any[];
+
+        const ventasCliente = sortVentasDesc(
+          ventas.filter((v) => v.id_cliente === clienteId)
+        );
+        const last = ventasCliente[0] ?? null;
+
+        if (last) {
+          setVentaId(last.id);
+          setIdMembresia(last.id_membresia ?? "");
+          
+          if (last.fecha_inicio) {
+            const di = new Date(last.fecha_inicio);
+            if (!Number.isNaN(di.getTime())) {
+              const iso = `${di.getFullYear()}-${String(di.getMonth() + 1).padStart(2, "0")}-${String(di.getDate()).padStart(2, "0")}`;
+              setFechaInicio(iso);
+            }
+          }
+
+          if (last.fecha_fin) {
+            const df = new Date(last.fecha_fin);
+            if (!Number.isNaN(df.getTime())) {
+              const iso = `${df.getFullYear()}-${String(df.getMonth() + 1).padStart(2, "0")}-${String(df.getDate()).padStart(2, "0")}`;
+              setFechaFin(iso);
+            }
+          }
+
+          setPrecioFinal(last.precio_final != null ? String(last.precio_final) : "");
+          setSesionesRestantes(last.sesiones_restantes != null ? String(last.sesiones_restantes) : "");
+        }
+
+        // ----- Membresías -----
+        const membs = (Array.isArray(membRes.data)
+          ? membRes.data
+          : (membRes.data as any)?.data ?? []) as Membresia[];
+
+        setMembresias(membs);
+      })
+      .catch((e) => {
+        console.error(e);
+        if (mounted) setError("No se pudo cargar la información.");
+      })
+      .finally(() => mounted && setLoading(false));
+
+    return () => {
+      mounted = false;
+    };
+  }, [clienteId]);
+
   useEffect(() => {
     if (!touchedFin) setFechaFin(addMonthsStr(fechaInicio, 1));
   }, [fechaInicio, touchedFin]);
@@ -379,16 +462,21 @@ export default function EditarClienteConMembresia() {
       // si subió nueva -> ruta nueva
       if (fotografiaRuta) clientePayload.fotografia = fotografiaRuta;
 
+      if (ventaId === undefined) {
+      throw new Error("ventaId es obligatorio para actualizar la venta");
+      }
+
       const payload: ActualizarClienteYVentaRequest = {
         cliente: clientePayload,
         venta: {
           id: ventaId,
+          id_cliente: clientePayload.id,
           id_membresia: Number(idMembresia),
           fecha_inicio: fechaInicio || undefined,
           fecha_fin: fechaFin || undefined,
           precio_final: precioFinal.trim() === "" ? undefined : Number(precioFinal),
           sesiones_restantes: sesionesRestantes.trim() === "" ? undefined : Number(sesionesRestantes),
-          estado: "Activa",
+          estado: "activa",
         },
       };
 
@@ -745,6 +833,14 @@ export default function EditarClienteConMembresia() {
               <Icon icon="solar:close-circle-outline" width="18" height="18" />
               Cancelar
             </Link>
+            <Button
+            color="yellow"
+            type="button"
+            onClick={() => navigate(`/HuellaController/${clienteId}`)}
+          >
+            Editar Huella
+          </Button>
+
           </div>
         </form>
       )}
