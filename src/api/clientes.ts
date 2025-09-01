@@ -12,7 +12,7 @@ export interface Cliente {
   telefono?: string | null;
   correo: string;
   direccion?: string | null;
-  id_tipo_descuento?: number | null;
+  id_tipo_descuento?: number | 1;
   huella_template?: string | null; 
   fotografia?: string | null;
 }

@@ -10,7 +10,8 @@ export interface ClienteIn {
   telefono?: string;
   direccion?: string;
   fotografia?: string;     // aquí mandas la RUTA (opfs:fotos/123.jpg o "")
-  huella_base64?: string;  // envías ""
+  huella_base64?: string;
+  id_tipo_descuento?: number | 1;  // envías ""
 }
 
 export type EstadoMembresia = "activa" | "vencida" | "sin_membresia";
@@ -42,6 +43,7 @@ export interface ClienteUpdateFull {
   telefono?: string;
   direccion?: string;
   id_huella?: number | null;
+  id_tipo_descuento?: number | 1;
   // fotografia?: string; // si en algún momento decides actualizar la ruta
   huella_base64?: string; // normalmente vacío
 }
@@ -66,6 +68,7 @@ export interface ActualizarClienteYVentaRequest {
 
 // CREATE: asegúrate que apiConfig.baseURL ya tenga /api/v1
 export function createClienteConMembresia(payload: ClienteMembresiaPayload) {
+  console.log(payload);
   return api.post("/clientes/with-membresia", payload);
 }
 

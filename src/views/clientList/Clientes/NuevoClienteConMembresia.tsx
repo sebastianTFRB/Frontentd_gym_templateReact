@@ -67,6 +67,7 @@ interface ClientePayload {
   direccion?: string;
   fotografia?: string;   // ruta devuelta por el backend
   huella_base64: string; // vacío
+  id_tipo_descuento?: number | 1;
 }
 interface VentaPayload {
   id_membresia: number;
@@ -305,6 +306,7 @@ export default function NuevoClienteConMembresia() {
         telefono: telefono.trim() || undefined,
         direccion: direccion.trim() || undefined,
         fotografia: fotografiaRuta,
+        id_tipo_descuento:  1,
         huella_base64: "",
       },
       venta: {
