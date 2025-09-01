@@ -7,7 +7,7 @@ import {
   deleteMembresia,
   Membresia,
 } from "../../api/membresias";
-import { Badge, Dropdown, Progress, Table, Spinner } from "flowbite-react";
+import { Badge, Dropdown, Progress, Table, Spinner, Button } from "flowbite-react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { Icon } from "@iconify/react";
 
@@ -89,7 +89,16 @@ export default function Membresias() {
 
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
+      <div className="flex justify-between items-center">
       <h5 className="card-title">Gestión de Membresías</h5>
+      <Button
+        color="success"
+        onClick={() => navigate("/add-membresia")}
+        className="flex items-center gap-2"
+      >
+        + Agregar Membresía
+      </Button>
+    </div>
 
       <div className="mt-3">
         {loading ? (

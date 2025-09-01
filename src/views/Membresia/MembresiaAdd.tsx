@@ -1,23 +1,19 @@
-// src/pages/MembresiaEdit.tsx
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Label, TextInput, Select, Button } from "flowbite-react";
-import { getMembresia, updateMembresia } from "../../api/membresias";
+import { createMembresia } from "../../api/membresias";
 
-// Tipo exclusivo para manejar el formulario en frontend
 interface FormMembresia {
   nombre_membresia: string;
-  duracion_dias: number | string; // string para permitir limpiar el input
-  cantidad_sesiones: number | string;
-  precio_base: number | string;
-  max_accesos_diarios: number | string;
+  duracion_dias: string; // guardamos como string
+  cantidad_sesiones: string;
+  precio_base: string;
+  max_accesos_diarios: string;
   estado: "ACTIVO" | "INACTIVO";
 }
 
-const MembresiaEdit = () => {
-  const { id } = useParams<{ id: string }>();
+const MembresiaAdd = () => {
   const navigate = useNavigate();
-  const membresiaId = Number(id);
 
   const [form, setForm] = useState<FormMembresia>({
     nombre_membresia: "",
@@ -28,64 +24,40 @@ const MembresiaEdit = () => {
     estado: "ACTIVO",
   });
 
-  // Cargar datos de la membresía
-  useEffect(() => {
-    if (!membresiaId) return;
-
-    const fetchData = async () => {
-      try {
-        const res = await getMembresia(membresiaId);
-        const data = res.data;
-
-        setForm({
-          nombre_membresia: data.nombre_membresia || "",
-          duracion_dias: data.duracion_dias ?? "",
-          cantidad_sesiones: data.cantidad_sesiones ?? "",
-          precio_base: data.precio_base ?? "",
-          max_accesos_diarios: data.max_accesos_diarios ?? "",
-          estado:"ACTIVO", // fallback
-        });
-      } catch (error) {
-        console.error("Error cargando membresía", error);
-      }
-    };
-
-    fetchData();
-  }, [membresiaId]);
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
 
     setForm((prev) => ({
       ...prev,
-      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!membresiaId) return;
 
     try {
-      // Aseguramos que se manden como números al backend
-      await updateMembresia(membresiaId, {
+      // Convertimos strings a números al enviar
+      const dataToSend = {
         ...form,
         duracion_dias: Number(form.duracion_dias),
         cantidad_sesiones: Number(form.cantidad_sesiones),
         precio_base: Number(form.precio_base),
         max_accesos_diarios: Number(form.max_accesos_diarios),
-      });
+      };
+
+      await createMembresia(dataToSend);
       navigate("/Membresia");
     } catch (error) {
-      console.error("Error actualizando membresía", error);
+      console.error("Error creando membresía", error);
     }
   };
 
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-      <h5 className="card-title">Editar Membresía</h5>
+      <h5 className="card-title">Agregar Membresía</h5>
       <form onSubmit={handleSubmit} className="mt-6">
         <div className="grid grid-cols-12 gap-6">
           {/* Columna izquierda */}
@@ -185,4 +157,4 @@ const MembresiaEdit = () => {
   );
 };
 
-export default MembresiaEdit;
+export default MembresiaAdd;
