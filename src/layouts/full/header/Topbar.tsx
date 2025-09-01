@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { Link } from "react-router";
 import adminmart_logo from "/src/assets/images/logos/goldens.svg";
-import Profile from "./Profile";
+// import Profile from "./Profile";
 import Notification from "./notification";
 import { api } from "../../../api/apiConfig";
 import { MouseEvent } from "react";
@@ -30,7 +30,7 @@ const Topbar: React.FC = () => {
     <div className="py-[15px] px-6 z-40 sticky top-0 bg-[linear-gradient(90deg,_#000000_0%,_#1a1a1a_100%)]">
       <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
         <div className="md:flex hidden items-center gap-5">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/dashboard" className="flex items-center gap-2">
             <img src={adminmart_logo} alt="logo" width={50} />
             <span className="text-2xl font-bold bg-gradient-to-r from-yellow-200 to-yellow-300 bg-clip-text text-transparent">
               Golden&apos;s Gym

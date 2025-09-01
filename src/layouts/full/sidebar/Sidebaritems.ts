@@ -31,7 +31,7 @@ const SidebarContent: MenuItem[] = [
         name: "Inicio",
         icon: "solar:home-linear",
         id: uniqueId(),
-        url: "/",
+        url: "/dashboard",
         isPro: false,
       },
     ],
