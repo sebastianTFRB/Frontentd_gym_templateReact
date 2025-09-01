@@ -37,6 +37,8 @@ const EditarClienteConMembresia = lazy(() => import('../views/clientList/Cliente
 const AddClient = lazy(() => import('../views/addClient/AddClient'));
 const HuellaController = lazy(() => import('../views/huellaController/HuellaController'));
 const MembresiaAdd  = lazy(() => import('../views/Membresia/MembresiaAdd'));
+const ReportesDashboard = lazy(() => import("../views/dashboards/ReportesDashboard"));
+
 const Router = [
   {
     path: '/',
@@ -62,6 +64,7 @@ const Router = [
       { path: '/add-client', exact: true, element: <AddClient /> },
       { path: '/HuellaController/:id', exact: true, element: <HuellaController /> },
       { path: '/add-membresia', exact: true, element: <MembresiaAdd /> },
+      { path: "/dashboard", element: <ReportesDashboard /> },
       
       { path: '*', element: <Navigate to="/auth/404" /> },
     ],
