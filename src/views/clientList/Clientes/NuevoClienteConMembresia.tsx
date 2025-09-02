@@ -22,6 +22,24 @@ function addMonthsStr(isoDate: string, months: number) {
   ).padStart(2, "0")}`;
 }
 
+function parseDateOnlyLocal(s?: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const [, y, mo, d] = m;
+    return new Date(Number(y), Number(mo) - 1, Number(d)); // <-- local
+  }
+  const d = new Date(s!);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function fmtDateInputLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // ===== Subir foto al backend
 const API_BASE = API_BASE_URL;
 
@@ -241,10 +259,13 @@ export default function NuevoClienteConMembresia() {
   // ✅ Validaciones
   const dateInvalid = useMemo(() => {
     if (!fechaInicio || !fechaFin) return false;
-    const di = Date.parse(fechaInicio);
-    const df = Date.parse(fechaFin);
-    if (Number.isNaN(di) || Number.isNaN(df)) return false;
-    return di > df;
+    const di = parseDateOnlyLocal(fechaInicio);
+    const df = parseDateOnlyLocal(fechaFin);
+    if (!di || !df) return false;
+    // Normaliza a medianoche local para comparar solo fecha calendario
+    di.setHours(0, 0, 0, 0);
+    df.setHours(0, 0, 0, 0);
+    return di.getTime() > df.getTime();
   }, [fechaInicio, fechaFin]);
 
   const precioInvalid = useMemo(() => {
@@ -607,19 +628,18 @@ export default function NuevoClienteConMembresia() {
               </div>
 
               {/* Fecha inicio */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="fecha_inicio" className="sr-only">Fecha inicio</label>
-                  <input
-                    id="fecha_inicio"
-                    type="date"
-                    className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                    aria-invalid={dateInvalid || undefined}
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
-                  />
-                </div>
-              </div>
+              <input
+                id="fecha_inicio"
+                type="date"
+                className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
+                aria-invalid={dateInvalid || undefined}
+                value={fechaInicio}
+                onChange={(e) => {
+                  // normaliza y asegura formato YYYY-MM-DD
+                  const d = parseDateOnlyLocal(e.target.value);
+                  setFechaInicio(d ? fmtDateInputLocal(d) : e.target.value);
+                }}
+              />
 
               {/* Fecha fin */}
               <div className="flex form-control form-rounded-xl">
@@ -632,9 +652,11 @@ export default function NuevoClienteConMembresia() {
                     aria-invalid={dateInvalid || undefined}
                     value={fechaFin}
                     onChange={(e) => {
-                      setFechaFin(e.target.value);
+                      const d = parseDateOnlyLocal(e.target.value);
+                      setFechaFin(d ? fmtDateInputLocal(d) : e.target.value);
                       setTouchedFin(true);
                     }}
+                    
                   />
                   {dateInvalid && (
                     <p className="mt-1 text-xs text-red-600">

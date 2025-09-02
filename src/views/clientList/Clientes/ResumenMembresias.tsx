@@ -13,10 +13,21 @@ import { API_BASE_URL } from "../../../api/apiConfig";
 
 // ================== helpers comunes ==================
 function formatDate(s?: string | null) {
-  if (!s) return "—";
+  const d = parseDateOnlyLocal(s);
+  return d ? d.toLocaleDateString("es-CO") : "—";
+}
+
+function parseDateOnlyLocal(s?: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const [, y, mo, d] = m;
+    // new Date(año, mes-1, día) --> crea medianoche LOCAL (sin desfases de zona)
+    return new Date(Number(y), Number(mo) - 1, Number(d));
+  }
+  // Si viene con hora/offset (ISO completo), dejamos que JS lo interprete.
   const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("es-CO");
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 // ===== helpers para foto (maneja rutas relativas, absolutas y base64)
@@ -69,10 +80,9 @@ function Foto({ src }: { src?: string | null }) {
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function safeDate(s?: string | null): Date | null {
-  if (!s) return null;
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return parseDateOnlyLocal(s);
 }
+
 function ceilDaysDiff(a: Date, b: Date) {
   return Math.ceil((b.getTime() - a.getTime()) / MS_PER_DAY);
 }
@@ -88,7 +98,10 @@ function progressByRemainingDays(
   fecha_inicio?: string | null,
   fecha_fin?: string | null
 ): { progress: number; color: "red" | "yellow" | "green" | "dark"; daysLeft: number } {
+  // ⚠️ Asegura que "hoy" sea medianoche local para evitar variaciones por hora del día
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const start = safeDate(fecha_inicio);
   const end = safeDate(fecha_fin);
 

@@ -21,9 +21,29 @@ function todayStr() {
 }
 function addMonthsStr(isoDate: string, months: number) {
   const [y, m, d] = isoDate.split("-").map(Number);
-  const base = new Date(y, m - 1, d);
+  const base = new Date(y, m - 1, d); // ya es local
   base.setMonth(base.getMonth() + months);
-  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}-${String(base.getDate()).padStart(2, "0")}`;
+  return fmtDateInputLocal(base); // ⬅️ en vez de concatenar manual
+}
+
+// ✅ parsea "YYYY-MM-DD" como medianoche LOCAL (sin desfase)
+function parseDateOnlyLocal(s?: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const [, y, mo, d] = m;
+    return new Date(Number(y), Number(mo) - 1, Number(d)); // <-- local
+  }
+  const d = new Date(s!);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+// ✅ formatea Date a "YYYY-MM-DD" en local (para inputs <type="date">)
+function fmtDateInputLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /* ===================== Foto: config/helpers ===================== */
@@ -82,8 +102,8 @@ function extractPrecioYSesiones(m?: Membresia) {
 }
 function sortVentasDesc(ventas: VentaMembresia[]) {
   return [...ventas].sort((a, b) => {
-    const da = new Date(a.fecha_inicio as any).getTime() || 0;
-    const db = new Date(b.fecha_inicio as any).getTime() || 0;
+    const da = parseDateOnlyLocal(a.fecha_inicio as any)?.getTime() ?? 0;
+    const db = parseDateOnlyLocal(b.fecha_inicio as any)?.getTime() ?? 0;
     return db - da;
   });
 }
@@ -303,6 +323,8 @@ export default function EditarClienteConMembresia() {
     return () => { mounted = false; };
   }, [clienteId]);
 */
+
+  // inicio use efec
   useEffect(() => {
     let mounted = true;
     setLoading(true);
@@ -324,11 +346,8 @@ export default function EditarClienteConMembresia() {
 
         // Fecha nacimiento
         if (c.fecha_nacimiento) {
-          const d = new Date(c.fecha_nacimiento);
-          if (!Number.isNaN(d.getTime())) {
-            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            setFechaNacimiento(iso);
-          }
+          const d = parseDateOnlyLocal(c.fecha_nacimiento);
+          if (d) setFechaNacimiento(fmtDateInputLocal(d));
         }
 
         // Foto
@@ -348,25 +367,20 @@ export default function EditarClienteConMembresia() {
         if (last) {
           setVentaId(last.id);
           setIdMembresia(last.id_membresia ?? "");
-          
-          if (last.fecha_inicio) {
-            const di = new Date(last.fecha_inicio);
-            if (!Number.isNaN(di.getTime())) {
-              const iso = `${di.getFullYear()}-${String(di.getMonth() + 1).padStart(2, "0")}-${String(di.getDate()).padStart(2, "0")}`;
-              setFechaInicio(iso);
-            }
-          }
 
+          if (last.fecha_inicio) {
+            const di = parseDateOnlyLocal(last.fecha_inicio);
+            if (di) setFechaInicio(fmtDateInputLocal(di));
+          }
           if (last.fecha_fin) {
-            const df = new Date(last.fecha_fin);
-            if (!Number.isNaN(df.getTime())) {
-              const iso = `${df.getFullYear()}-${String(df.getMonth() + 1).padStart(2, "0")}-${String(df.getDate()).padStart(2, "0")}`;
-              setFechaFin(iso);
-            }
+            const df = parseDateOnlyLocal(last.fecha_fin);
+            if (df) setFechaFin(fmtDateInputLocal(df));
           }
 
           setPrecioFinal(last.precio_final != null ? String(last.precio_final) : "");
-          setSesionesRestantes(last.sesiones_restantes != null ? String(last.sesiones_restantes) : "");
+          setSesionesRestantes(
+            last.sesiones_restantes != null ? String(last.sesiones_restantes) : ""
+          );
         }
 
         // ----- Membresías -----
@@ -403,10 +417,12 @@ export default function EditarClienteConMembresia() {
   /* ===================== Validaciones ===================== */
   const dateInvalid = useMemo(() => {
     if (!fechaInicio || !fechaFin) return false;
-    const di = Date.parse(fechaInicio);
-    const df = Date.parse(fechaFin);
-    if (Number.isNaN(di) || Number.isNaN(df)) return false;
-    return di > df;
+    const di = parseDateOnlyLocal(fechaInicio);
+    const df = parseDateOnlyLocal(fechaFin);
+    if (!di || !df) return false;
+    di.setHours(0, 0, 0, 0);
+    df.setHours(0, 0, 0, 0);
+    return di.getTime() > df.getTime();
   }, [fechaInicio, fechaFin]);
 
   const precioInvalid = useMemo(() => {
@@ -558,7 +574,16 @@ export default function EditarClienteConMembresia() {
               <div className="flex form-control form-rounded-xl">
                 <div className="relative w-full">
                   <label htmlFor="fecha_nacimiento" className="sr-only">Fecha de nacimiento</label>
-                  <input id="fecha_nacimiento" type="date" className={baseInput} value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
+                  <input 
+                    id="fecha_nacimiento" 
+                    type="date" 
+                    className={baseInput} 
+                    value={fechaNacimiento} 
+                    onChange={(e) => {
+                      const d = parseDateOnlyLocal(e.target.value);
+                      setFechaNacimiento(d ? fmtDateInputLocal(d) : e.target.value);
+                    }}
+                  />
                 </div>
               </div>
               <div className="flex form-control form-rounded-xl">
@@ -737,7 +762,11 @@ export default function EditarClienteConMembresia() {
                     className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
                     aria-invalid={dateInvalid || undefined}
                     value={fechaInicio}
-                    onChange={(e) => { setFechaInicio(e.target.value); /* touchedFin no cambia aquí */ }}
+                    onChange={(e) => {
+                      const d = parseDateOnlyLocal(e.target.value);
+                      setFechaInicio(d ? fmtDateInputLocal(d) : e.target.value);
+                      // touchedFin no cambia aquí
+                    }}
                   />
                 </div>
               </div>
@@ -751,7 +780,11 @@ export default function EditarClienteConMembresia() {
                     className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
                     aria-invalid={dateInvalid || undefined}
                     value={fechaFin}
-                    onChange={(e) => { setFechaFin(e.target.value); setTouchedFin(true); }}
+                    onChange={(e) => {
+                      const d = parseDateOnlyLocal(e.target.value);
+                      setFechaFin(d ? fmtDateInputLocal(d) : e.target.value);
+                      setTouchedFin(true);
+                    }}
                   />
                   {dateInvalid && (
                     <p className="mt-1 text-xs text-red-600">
