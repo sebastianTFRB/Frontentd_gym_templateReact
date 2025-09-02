@@ -40,7 +40,7 @@ export default function HuellaController() {
     fetchCliente();
   }, [id]);
 
-  const handleBack = () => navigate("/ClientList");
+  const handleBack = () => navigate(-1);
 
   const handleUpdateCommand = async () => {
     if (!id) return;

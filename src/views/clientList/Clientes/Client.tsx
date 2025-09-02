@@ -240,14 +240,16 @@ export default function ClientesList() {
                         </Dropdown.Item>
 
                         {/* Eliminar */}
-                        <Dropdown.Item
+                        {/*<Dropdown.Item
                           className="flex gap-3 cursor-pointer text-red-600"
                           onClick={() => onDelete(c.id)}
                         >
                           <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
                           <span>Eliminar</span>
                         </Dropdown.Item>
+                        */}
                       </Dropdown>
+                      
                     </Table.Cell>
                   </Table.Row>
                 );

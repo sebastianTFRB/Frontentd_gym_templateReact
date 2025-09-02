@@ -194,7 +194,7 @@ export default function Membresias() {
                           <span>Editar</span>
                         </Dropdown.Item>
 
-
+                        {/* Acciones 
                         <Dropdown.Item
                           className="flex gap-3 cursor-pointer text-red-600"
                           onClick={() => handleDelete(m.id)}
@@ -205,7 +205,9 @@ export default function Membresias() {
                           />
                           <span>Eliminar</span>
                         </Dropdown.Item>
+                        */}
                       </Dropdown>
+                      
                     </Table.Cell>
                   </Table.Row>
                 ))}

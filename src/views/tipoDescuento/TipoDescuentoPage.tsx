@@ -104,6 +104,7 @@ export default function TipoDescuentoPage() {
                           <Icon icon="solar:pen-new-square-broken" height={18} />
                           <span>Editar</span>
                         </Dropdown.Item>
+                        {/* Acciones 
 
                         <Dropdown.Item
                           className="flex gap-3 cursor-pointer text-red-600"
@@ -115,6 +116,7 @@ export default function TipoDescuentoPage() {
                           />
                           <span>Eliminar</span>
                         </Dropdown.Item>
+                        */}
                       </Dropdown>
                     </Table.Cell>
                   </Table.Row>
