@@ -3,6 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button, Spinner } from "flowbite-react";
 import { Icon } from "@iconify/react";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+
+  
 
 import { getCliente, Cliente } from "../../../api/clientes";
 import { getVentasMembresia, VentaMembresia } from "../../../api/venta_membresia";
@@ -110,6 +114,7 @@ function sortVentasDesc(ventas: VentaMembresia[]) {
 
 /* ===================== Componente ===================== */
 export default function EditarClienteConMembresia() {
+  const MySwal = withReactContent(Swal);
   const { id } = useParams<{ id: string }>();
   const clienteId = Number(id);
   const navigate = useNavigate();
@@ -498,11 +503,23 @@ export default function EditarClienteConMembresia() {
 
       await updateClienteConMembresia(clienteId, payload);
       setInfo("Cambios guardados.");
-      navigate("/clientes/membresias");
+      MySwal.fire({
+        icon: "success",
+        title: "¡Comando enviado!",
+        text: "Cambio guardado correctamente",
+        confirmButtonColor: "#d2dd04ff",
+      });
+      
     } catch (e: any) {
       console.error(e);
       const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
       setError(String(msg));
+      MySwal.fire({
+        icon: "error",
+        title: "¡Comando enviado!",
+        text: "Error al guardar cambios",
+        confirmButtonColor: "#dd0404ff",
+      });
     } finally {
       setSaving(false);
     }

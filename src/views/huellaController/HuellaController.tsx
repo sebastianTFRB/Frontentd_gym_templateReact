@@ -4,6 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/apiConfig";
 import { Button } from "flowbite-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+
 
 interface Cliente {
   id: number;
@@ -14,6 +17,11 @@ interface Cliente {
 }
 
 export default function HuellaController() {
+  const MySwal = withReactContent(Swal);
+  
+  
+
+
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const deviceId = 1; 
@@ -52,14 +60,23 @@ export default function HuellaController() {
         id_huella: 0,
       });
       console.log("Respuesta:", response.data);
-
-      alert("Comando enviado correctamente ✅");
+      MySwal.fire({
+        icon: "success",
+        title: "¡Comando enviado!",
+        text: "El huellero está sincronizado correctamente ✅",
+        confirmButtonColor: "#3085d6",
+      });
 
       setShowScan(true); // activar escaneo
       setReady(true);    // activar mensaje
     } catch (error) {
       console.error("Error al enviar comando:", error);
-      alert("Error al enviar comando ❌");
+      MySwal.fire({
+        icon: "error",
+        title: "¡Comando enviado!",
+        text: "Error al enviar comando",
+        confirmButtonColor: "#d63030ff",
+      });
     } finally {
       setLoading(false);
     }

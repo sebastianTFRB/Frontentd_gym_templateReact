@@ -5,6 +5,8 @@ import { Icon } from "@iconify/react";
 import { createClienteConMembresia } from "../../../api/clientes_membresia";
 import { getMembresias } from "../../../api/membresias";
 import { API_BASE_URL } from "../../../api/apiConfig";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 
 // ===== Helpers de fecha
 function todayStr() {
@@ -119,6 +121,7 @@ function extractPrecioYSesiones(m?: Membresia) {
 
 export default function NuevoClienteConMembresia() {
   const navigate = useNavigate();
+  const MySwal = withReactContent(Swal);
 
   // Catálogos
   const [membresias, setMembresias] = useState<Membresia[]>([]);
@@ -364,13 +367,17 @@ export default function NuevoClienteConMembresia() {
     console.error(e);
     const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
     setError(String(msg));
+    MySwal.fire({
+        icon: "error",
+        title: "¡Comando enviado!",
+        text: "Error al crear",
+        confirmButtonColor: "#d63030ff",
+      });
   } finally {
     setSaving(false);
   }
 };
-
      
-
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
       {/* Header */}
