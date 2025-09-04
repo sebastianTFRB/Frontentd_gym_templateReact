@@ -505,7 +505,7 @@ export default function EditarClienteConMembresia() {
       setInfo("Cambios guardados.");
       MySwal.fire({
         icon: "success",
-        title: "¡Comando enviado!",
+        title: "¡Guardado!",
         text: "Cambio guardado correctamente",
         confirmButtonColor: "#d2dd04ff",
       });
@@ -516,7 +516,7 @@ export default function EditarClienteConMembresia() {
       setError(String(msg));
       MySwal.fire({
         icon: "error",
-        title: "¡Comando enviado!",
+        title: "¡Error al Guardar!",
         text: "Error al guardar cambios",
         confirmButtonColor: "#dd0404ff",
       });
@@ -596,10 +596,9 @@ export default function EditarClienteConMembresia() {
                     type="date" 
                     className={baseInput} 
                     value={fechaNacimiento} 
-                    onChange={(e) => {
-                      const d = parseDateOnlyLocal(e.target.value);
-                      setFechaNacimiento(d ? fmtDateInputLocal(d) : e.target.value);
-                    }}
+                    onChange={(e) => setFechaNacimiento(e.target.value)}
+                    
+               
                   />
                 </div>
               </div>

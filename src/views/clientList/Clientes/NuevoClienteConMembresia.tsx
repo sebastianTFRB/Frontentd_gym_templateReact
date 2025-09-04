@@ -265,7 +265,7 @@ export default function NuevoClienteConMembresia() {
     const di = parseDateOnlyLocal(fechaInicio);
     const df = parseDateOnlyLocal(fechaFin);
     if (!di || !df) return false;
-    // Normaliza a medianoche local para comparar solo fecha calendario
+    
     di.setHours(0, 0, 0, 0);
     df.setHours(0, 0, 0, 0);
     return di.getTime() > df.getTime();
@@ -369,7 +369,7 @@ export default function NuevoClienteConMembresia() {
     setError(String(msg));
     MySwal.fire({
         icon: "error",
-        title: "¡Comando enviado!",
+        title: "¡Error al guardar!",
         text: "Error al crear",
         confirmButtonColor: "#d63030ff",
       });
