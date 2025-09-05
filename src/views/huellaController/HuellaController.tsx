@@ -1,8 +1,9 @@
 // src/pages/HuellaController.tsx
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../../api/apiConfig";
 import { Button } from "flowbite-react";
+import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -96,7 +97,19 @@ export default function HuellaController() {
               <p><strong>Nombre:</strong> {cliente.nombre} {cliente.apellido}</p>
               <p><strong>Documento:</strong> {cliente.documento}</p>
               <p><strong>Correo:</strong> {cliente.correo || "-"}</p>
-
+              <Link
+                to={`/clientes/${cliente.id}/editar-membresia`}
+                role="button"
+                className="flex items-center justify-center px-4 py-3 gap-3 text-[15px]
+                            leading-[normal] font-medium text-black
+                            bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
+                            rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
+                            hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
+                            focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
+              >
+                <Icon icon="openmoji:return" width="18" height="18" />
+                <span>Volver</span>
+              </Link>
               {/* 🔹 Mensaje de lector listo */}
               {ready && (
                 <p className="mt-4 text-2xl font-bold text-green-600">
@@ -137,12 +150,7 @@ export default function HuellaController() {
         <Button color="primary" onClick={handleUpdateCommand} disabled={loading}>
           {loading ? "Enviando comando..." : "Sincronizar Huellero"}
         </Button>
-        <Button
-          className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded"
-          onClick={handleBack}
-        >
-          Volver
-        </Button>
+        
       </div>
     </div>
   );
