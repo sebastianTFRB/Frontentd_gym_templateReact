@@ -6,8 +6,6 @@ import { Icon } from "@iconify/react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 
-  
-
 import { getCliente, Cliente } from "../../../api/clientes";
 import { getVentasMembresia, VentaMembresia } from "../../../api/venta_membresia";
 import { getMembresias } from "../../../api/membresias";
@@ -23,31 +21,41 @@ function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function addMonthsStr(isoDate: string, months: number) {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const base = new Date(y, m - 1, d); // ya es local
-  base.setMonth(base.getMonth() + months);
-  return fmtDateInputLocal(base); // ⬅️ en vez de concatenar manual
-}
 
-// ✅ parsea "YYYY-MM-DD" como medianoche LOCAL (sin desfase)
-function parseDateOnlyLocal(s?: string | null): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) {
-    const [, y, mo, d] = m;
-    return new Date(Number(y), Number(mo) - 1, Number(d)); // <-- local
-  }
-  const d = new Date(s!);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-// ✅ formatea Date a "YYYY-MM-DD" en local (para inputs <type="date">)
+// formatea Date a "YYYY-MM-DD" en local
 function fmtDateInputLocal(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+// parsea "YYYY-MM-DD" como LOCAL (evita -1 día por UTC)
+function parseDateOnlyLocal(s?: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const [, y, mo, d] = m;
+    return new Date(Number(y), Number(mo) - 1, Number(d));
+  }
+  const d = new Date(s!);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function addMonthsStr(isoDate: string, months: number) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const base = new Date(y, m - 1, d); // local
+  base.setMonth(base.getMonth() + months);
+  return fmtDateInputLocal(base);
+}
+
+// suma días completos en local (usa days-1 si quieres inclusivo)
+function addDaysStr(isoDate: string, days: number) {
+  const d0 = parseDateOnlyLocal(isoDate);
+  if (!d0) return isoDate;
+  const d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate());
+  d.setDate(d.getDate() + days);
+  return fmtDateInputLocal(d);
 }
 
 /* ===================== Foto: config/helpers ===================== */
@@ -97,6 +105,12 @@ type Membresia = {
   precio_base?: number;
   valor?: number;
   cantidad_sesiones?: number;
+
+  // posibles nombres para la duración en días
+  duracion_dias?: number;
+  dias_duracion?: number;
+  dias?: number;
+  dias_vigencia?: number;
 };
 function extractPrecioYSesiones(m?: Membresia) {
   if (!m) return { precio: undefined as number | undefined, sesiones: undefined as number | undefined };
@@ -110,6 +124,18 @@ function sortVentasDesc(ventas: VentaMembresia[]) {
     const db = parseDateOnlyLocal(b.fecha_inicio as any)?.getTime() ?? 0;
     return db - da;
   });
+}
+function defaultSessionsFor(membresias: Membresia[], id?: number | ""): number | undefined {
+  if (!id) return undefined;
+  const m = membresias.find((x) => x.id === Number(id));
+  return m?.cantidad_sesiones;
+}
+function durationDaysFor(membresias: Membresia[], id?: number | ""): number | undefined {
+  if (!id) return undefined;
+  const m = membresias.find((x) => x.id === Number(id));
+  if (!m) return undefined;
+  const n = (m.duracion_dias ?? m.dias_duracion ?? m.dias ?? m.dias_vigencia) as number | undefined;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 /* ===================== Componente ===================== */
@@ -138,10 +164,10 @@ export default function EditarClienteConMembresia() {
 
   /* Foto */
   const [fotoRutaActual, setFotoRutaActual] = useState<string | null>(null);
-  const [fotoPreviewUrl, setFotoPreviewUrl] = useState<string | null>(null); // preview nueva
+  const [fotoPreviewUrl, setFotoPreviewUrl] = useState<string | null>(null);
   const [fotoBase64Nueva, setFotoBase64Nueva] = useState<string | null>(null);
   const [fotoMime, setFotoMime] = useState<"image/jpeg" | "image/png">("image/jpeg");
-  const [borrarFoto, setBorrarFoto] = useState(false); // para limpiar en backend (enviando "")
+  const [borrarFoto, setBorrarFoto] = useState(false);
 
   // Drag & Drop
   const [dragActive, setDragActive] = useState(false);
@@ -167,7 +193,7 @@ export default function EditarClienteConMembresia() {
       setFotoMime(file.type === "image/png" ? "image/png" : "image/jpeg");
       setFotoBase64Nueva(b64);
       setFotoPreviewUrl(dataUrl);
-      setBorrarFoto(false); // si carga nueva, no borrar
+      setBorrarFoto(false);
     };
     reader.readAsDataURL(file);
   };
@@ -212,7 +238,7 @@ export default function EditarClienteConMembresia() {
     const v = videoRef.current;
     const stream = mediaStreamRef.current;
     if (!v || !stream) return;
-    v.srcObject = stream as any;
+    (v as any).srcObject = stream;
     v.muted = true;
     const onLoaded = () => setVideoReady(true);
     v.addEventListener("loadedmetadata", onLoaded);
@@ -238,7 +264,7 @@ export default function EditarClienteConMembresia() {
   const stopCamera = () => {
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
+    if (videoRef.current) (videoRef.current as any).srcObject = null;
     setCamOn(false);
   };
   const takePhoto = () => {
@@ -262,162 +288,107 @@ export default function EditarClienteConMembresia() {
   const [idMembresia, setIdMembresia] = useState<number | "">("");
   const [fechaInicio, setFechaInicio] = useState<string>(todayStr());
   const [fechaFin, setFechaFin] = useState<string>(() => addMonthsStr(todayStr(), 1));
-  const [touchedFin, setTouchedFin] = useState(false); // 👈 evita sobreescribir si el usuario la cambió
+  const [touchedFin, setTouchedFin] = useState(false);
   const [precioFinal, setPrecioFinal] = useState<string>("");
   const [sesionesRestantes, setSesionesRestantes] = useState<string>("");
   const estado: EstadoMembresia = "activa";
 
-  /* ===== Cargar datos ===== */
-   /* useEffect(() => {
-    let mounted = true;
+  // Flags
+  const [userChangedMembresia, setUserChangedMembresia] = useState(false);
+
+  /* ===== Carga de datos (reutilizable) ===== */
+  const loadData = async (idCli: number) => {
     setLoading(true);
     setError(null);
+    try {
+      const [cliRes, ventasRes, membRes] = await Promise.all([
+        getCliente(idCli),
+        getVentasMembresia(),
+        getMembresias(),
+      ]);
 
-    Promise.all([getCliente(clienteId), getVentasMembresia(), getMembresias()])
-      .then(([cliRes, ventasRes, membRes]) => {
-        if (!mounted) return;
+      // Cliente
+      const c = cliRes.data as Cliente;
+      setCliente(c);
+      setNombre(c.nombre ?? "");
+      setApellido(c.apellido ?? "");
+      setDocumento(c.documento ?? "");
+      setCorreo(c.correo ?? "");
+      setTelefono(c.telefono ?? "");
+      setDireccion(c.direccion ?? "");
+      if (c.fecha_nacimiento) {
+        const d = parseDateOnlyLocal(c.fecha_nacimiento);
+        if (d) setFechaNacimiento(fmtDateInputLocal(d));
+      }
+      const fotoDb = (c as any).fotografia || (c as any).foto || null;
+      setFotoRutaActual(fotoDb);
 
-        const c = cliRes.data as Cliente;
-        setCliente(c);
-        setNombre(c.nombre || "");
-        setApellido(c.apellido || "");
-        setDocumento(c.documento || "");
-        setCorreo(c.correo || "");
-        setTelefono(c.telefono || "");
-        setDireccion(c.direccion || "");
-        if ((c as any).fecha_nacimiento) {
-          const d = new Date((c as any).fecha_nacimiento as any);
-          if (!Number.isNaN(d.getTime())) {
-            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            setFechaNacimiento(iso);
+      // Ventas
+      const ventas = (Array.isArray(ventasRes.data)
+        ? ventasRes.data
+        : (ventasRes.data as any)?.data ?? []) as any[];
+      const ventasCliente = sortVentasDesc(ventas.filter((v) => v.id_cliente === idCli));
+      const last = ventasCliente[0] ?? null;
+
+      if (last) {
+        setVentaId(last.id);
+        if (last.fecha_inicio) {
+          const di = parseDateOnlyLocal(last.fecha_inicio);
+          if (di) setFechaInicio(fmtDateInputLocal(di));
+        }
+        if (last.fecha_fin) {
+          const df = parseDateOnlyLocal(last.fecha_fin);
+          if (df) {
+            setFechaFin(fmtDateInputLocal(df));
+            setTouchedFin(true);
           }
         }
-        const fotoDb = (c as any).fotografia || (c as any).foto || null;
-        setFotoRutaActual(fotoDb || null);
-
-        const ventas = Array.isArray(ventasRes.data) ? ventasRes.data : ventasRes.data?.data || [];
-        const ventasCliente = sortVentasDesc(ventas.filter((v: any) => v.id_cliente === clienteId));
-        const last = ventasCliente[0] || null;
-
-        if (last) {
-          setVentaId(last.id);
-          setIdMembresia(last.id_membresia || "");
-          if (last.fecha_inicio) {
-            const di = new Date(last.fecha_inicio);
-            const iso = `${di.getFullYear()}-${String(di.getMonth() + 1).padStart(2, "0")}-${String(di.getDate()).padStart(2, "0")}`;
-            setFechaInicio(iso);
-          }
-          if (last.fecha_fin) {
-            const df = new Date(last.fecha_fin);
-            const iso = `${df.getFullYear()}-${String(df.getMonth() + 1).padStart(2, "0")}-${String(df.getDate()).padStart(2, "0")}`;
-            setFechaFin(iso);
-          }
-          setPrecioFinal(last.precio_final != null ? String(last.precio_final) : "");
-          setSesionesRestantes(last.sesiones_restantes != null ? String(last.sesiones_restantes) : "");
-        }
-
-        const membs = Array.isArray(membRes.data) ? membRes.data : membRes.data?.data || [];
-        setMembresias(membs);
-      })
-      .catch((e) => {
-        console.error(e);
-        if (mounted) setError("No se pudo cargar la información.");
-      })
-      .finally(() => mounted && setLoading(false));
-
-    return () => { mounted = false; };
-  }, [clienteId]);
-*/
-
-  // inicio use efec
-  useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    setError(null);
-
-    Promise.all([getCliente(clienteId), getVentasMembresia(), getMembresias()])
-      .then(([cliRes, ventasRes, membRes]) => {
-        if (!mounted) return;
-
-        // ----- Cliente -----
-        const c = cliRes.data as Cliente;
-        setCliente(c);
-        setNombre(c.nombre ?? "");
-        setApellido(c.apellido ?? "");
-        setDocumento(c.documento ?? "");
-        setCorreo(c.correo ?? "");
-        setTelefono(c.telefono ?? "");
-        setDireccion(c.direccion ?? "");
-
-        // Fecha nacimiento
-        if (c.fecha_nacimiento) {
-          const d = parseDateOnlyLocal(c.fecha_nacimiento);
-          if (d) setFechaNacimiento(fmtDateInputLocal(d));
-        }
-
-        // Foto
-        const fotoDb = (c as any).fotografia || (c as any).foto || null;
-        setFotoRutaActual(fotoDb);
-
-        // ----- Ventas -----
-        const ventas = (Array.isArray(ventasRes.data)
-          ? ventasRes.data
-          : (ventasRes.data as any)?.data ?? []) as any[];
-
-        const ventasCliente = sortVentasDesc(
-          ventas.filter((v) => v.id_cliente === clienteId)
+        setPrecioFinal(last.precio_final != null ? String(last.precio_final) : "");
+        setSesionesRestantes(
+          last.sesiones_restantes != null ? String(last.sesiones_restantes) : ""
         );
-        const last = ventasCliente[0] ?? null;
+        setIdMembresia(last.id_membresia ?? "");
+        setUserChangedMembresia(false);
+      }
 
-        if (last) {
-          setVentaId(last.id);
-          setIdMembresia(last.id_membresia ?? "");
+      // Membresías
+      const membs = (Array.isArray(membRes.data)
+        ? membRes.data
+        : (membRes.data as any)?.data ?? []) as Membresia[];
+      setMembresias(membs);
+    } catch (e) {
+      console.error(e);
+      setError("No se pudo cargar la información.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          if (last.fecha_inicio) {
-            const di = parseDateOnlyLocal(last.fecha_inicio);
-            if (di) setFechaInicio(fmtDateInputLocal(di));
-          }
-          if (last.fecha_fin) {
-            const df = parseDateOnlyLocal(last.fecha_fin);
-            if (df) setFechaFin(fmtDateInputLocal(df));
-          }
-
-          setPrecioFinal(last.precio_final != null ? String(last.precio_final) : "");
-          setSesionesRestantes(
-            last.sesiones_restantes != null ? String(last.sesiones_restantes) : ""
-          );
-        }
-
-        // ----- Membresías -----
-        const membs = (Array.isArray(membRes.data)
-          ? membRes.data
-          : (membRes.data as any)?.data ?? []) as Membresia[];
-
-        setMembresias(membs);
-      })
-      .catch((e) => {
-        console.error(e);
-        if (mounted) setError("No se pudo cargar la información.");
-      })
-      .finally(() => mounted && setLoading(false));
-
-    return () => {
-      mounted = false;
-    };
+  // Cargar al montar
+  useEffect(() => {
+    loadData(clienteId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId]);
 
+  // Si el usuario NO tocó fecha fin, actualiza al cambiar inicio:
+  // usa duración en días de la membresía si existe, si no, +1 mes
   useEffect(() => {
-    if (!touchedFin) setFechaFin(addMonthsStr(fechaInicio, 1));
-  }, [fechaInicio, touchedFin]);
+    if (touchedFin) return;
+    const dur = durationDaysFor(membresias, idMembresia);
+    if (dur) {
+      setFechaFin(addDaysStr(fechaInicio, dur)); // usa (dur - 1) si deseas inclusivo
+    } else {
+      setFechaFin(addMonthsStr(fechaInicio, 1));
+    }
+  }, [fechaInicio, touchedFin, idMembresia, membresias]);
 
-  // Autocompletar precio/sesiones al cambiar membresía
+  // Autocompletar precio SOLO si el usuario cambia la membresía
   useEffect(() => {
-    if (idMembresia === "") return;
+    if (idMembresia === "" || !userChangedMembresia) return;
     const m = membresias.find((x) => x.id === Number(idMembresia));
-    const { precio, sesiones } = extractPrecioYSesiones(m);
+    const { precio } = extractPrecioYSesiones(m);
     if (precio != null && Number.isFinite(precio)) setPrecioFinal(String(precio));
-    if (sesiones != null && Number.isFinite(sesiones)) setSesionesRestantes(String(sesiones));
-  }, [idMembresia, membresias]);
+  }, [idMembresia, membresias, userChangedMembresia]);
 
   /* ===================== Validaciones ===================== */
   const dateInvalid = useMemo(() => {
@@ -454,6 +425,7 @@ export default function EditarClienteConMembresia() {
       setError("Nombre, apellido y documento son obligatorios."); return;
     }
     if (idMembresia === "") { setError("Selecciona una membresía."); return; }
+    if (ventaId === undefined) { setError("No se encontró la venta a actualizar."); return; }
 
     setSaving(true);
     try {
@@ -478,20 +450,14 @@ export default function EditarClienteConMembresia() {
         huella_base64: "",
       };
 
-      // si pidió borrar foto y no subió nueva -> envia string vacío
       if (borrarFoto && !fotografiaRuta) clientePayload.fotografia = "";
-      // si subió nueva -> ruta nueva
       if (fotografiaRuta) clientePayload.fotografia = fotografiaRuta;
-
-      if (ventaId === undefined) {
-      throw new Error("ventaId es obligatorio para actualizar la venta");
-      }
 
       const payload: ActualizarClienteYVentaRequest = {
         cliente: clientePayload,
         venta: {
           id: ventaId,
-          id_cliente: clientePayload.id,
+          id_cliente: clienteId, // usar id del path
           id_membresia: Number(idMembresia),
           fecha_inicio: fechaInicio || undefined,
           fecha_fin: fechaFin || undefined,
@@ -502,14 +468,23 @@ export default function EditarClienteConMembresia() {
       };
 
       await updateClienteConMembresia(clienteId, payload);
+
       setInfo("Cambios guardados.");
-      MySwal.fire({
+      await MySwal.fire({
         icon: "success",
         title: "¡Guardado!",
         text: "Cambio guardado correctamente",
         confirmButtonColor: "#d2dd04ff",
       });
-      
+
+      // 👇 permanecer en la misma pantalla y refrescar datos
+      await loadData(clienteId);
+      setTouchedFin(true);           // mantenemos la fecha fin estable tras recarga
+      setUserChangedMembresia(false); // y evitamos autocompletar accidental
+
+      // opcional: subir al inicio de la página
+      // window.scrollTo({ top: 0, behavior: "smooth" });
+
     } catch (e: any) {
       console.error(e);
       const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
@@ -597,8 +572,6 @@ export default function EditarClienteConMembresia() {
                     className={baseInput} 
                     value={fechaNacimiento} 
                     onChange={(e) => setFechaNacimiento(e.target.value)}
-                    
-               
                   />
                 </div>
               </div>
@@ -627,7 +600,6 @@ export default function EditarClienteConMembresia() {
           <section>
             <h6 className="font-semibold mb-3">Fotografía</h6>
 
-            {/* Tarjetas actual / nueva */}
             <div className="flex items-start gap-6 mb-4">
               <div className="flex flex-col items-start">
                 <span className="text-xs mb-1 opacity-70">Actual</span>
@@ -664,7 +636,6 @@ export default function EditarClienteConMembresia() {
               )}
             </div>
 
-            {/* Zona de drop + botones */}
             <div
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
@@ -758,7 +729,27 @@ export default function EditarClienteConMembresia() {
                     id="id_membresia"
                     className={baseInput}
                     value={idMembresia}
-                    onChange={(e) => setIdMembresia(e.target.value ? Number(e.target.value) : "")}
+                    onChange={(e) => {
+                      const newId = e.target.value ? Number(e.target.value) : "";
+                      setIdMembresia(newId);
+                      setUserChangedMembresia(true);
+
+                      // Reiniciar sesiones por defecto
+                      const defSessions = defaultSessionsFor(membresias, newId);
+                      if (defSessions != null && Number.isFinite(defSessions)) {
+                        setSesionesRestantes(String(defSessions));
+                      }
+
+                      // Ajustar fin según días de duración; si no hay, +1 mes
+                      const dur = durationDaysFor(membresias, newId);
+                      if (dur) {
+                        setFechaFin(addDaysStr(fechaInicio, dur)); // usa (dur - 1) si deseas inclusivo
+                        setTouchedFin(false);
+                      } else {
+                        setFechaFin(addMonthsStr(fechaInicio, 1));
+                        setTouchedFin(false);
+                      }
+                    }}
                     required
                   >
                     <option value="">Selecciona…</option>
@@ -781,7 +772,6 @@ export default function EditarClienteConMembresia() {
                     onChange={(e) => {
                       const d = parseDateOnlyLocal(e.target.value);
                       setFechaInicio(d ? fmtDateInputLocal(d) : e.target.value);
-                      // touchedFin no cambia aquí
                     }}
                   />
                 </div>
@@ -883,13 +873,12 @@ export default function EditarClienteConMembresia() {
               Cancelar
             </Link>
             <Button
-            color="yellow"
-            type="button"
-            onClick={() => navigate(`/HuellaController/${clienteId}`)}
-          >
-            Editar Huella
-          </Button>
-
+              color="yellow"
+              type="button"
+              onClick={() => navigate(`/HuellaController/${clienteId}`)}
+            >
+              Editar Huella
+            </Button>
           </div>
         </form>
       )}
