@@ -42,6 +42,15 @@ function fmtDateInputLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// suma días completos en local (si quieres inclusivo, usa days-1)
+function addDaysStr(isoDate: string, days: number) {
+  const d0 = parseDateOnlyLocal(isoDate);
+  if (!d0) return isoDate;
+  const d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate());
+  d.setDate(d.getDate() + days);
+  return fmtDateInputLocal(d);
+}
+
 // ===== Subir foto al backend
 const API_BASE = API_BASE_URL;
 
@@ -85,8 +94,8 @@ interface ClientePayload {
   correo?: string;
   telefono?: string;
   direccion?: string;
-  fotografia?: string;   // ruta devuelta por el backend
-  huella_base64: string; // vacío
+  fotografia?: string;
+  huella_base64: string;
   id_tipo_descuento?: number | 1;
 }
 interface VentaPayload {
@@ -110,6 +119,12 @@ type Membresia = {
   precio_base?: number;
   valor?: number;
   cantidad_sesiones?: number;
+
+  // posibles nombres para duración (días)
+  duracion_dias?: number;
+  dias_duracion?: number;
+  dias?: number;
+  dias_vigencia?: number;
 };
 
 function extractPrecioYSesiones(m?: Membresia) {
@@ -117,6 +132,18 @@ function extractPrecioYSesiones(m?: Membresia) {
   const precio = (m.precio ?? m.precio_base ?? m.valor) as number | undefined;
   const sesiones = m.cantidad_sesiones as number | undefined;
   return { precio, sesiones };
+}
+function defaultSessionsFor(membresias: Membresia[], id?: number | ""): number | undefined {
+  if (!id) return undefined;
+  const m = membresias.find((x) => x.id === Number(id));
+  return m?.cantidad_sesiones;
+}
+function durationDaysFor(membresias: Membresia[], id?: number | ""): number | undefined {
+  if (!id) return undefined;
+  const m = membresias.find((x) => x.id === Number(id));
+  if (!m) return undefined;
+  const n = (m.duracion_dias ?? m.dias_duracion ?? m.dias ?? m.dias_vigencia) as number | undefined;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 export default function NuevoClienteConMembresia() {
@@ -158,42 +185,56 @@ export default function NuevoClienteConMembresia() {
   const [precioFinal, setPrecioFinal] = useState<string>("");
   const [sesionesRestantes, setSesionesRestantes] = useState<string>("");
 
-  // Fecha fin auto +1 mes (solo si el usuario NO la tocó)
+  // Fecha fin auto (si el usuario NO la tocó): usa duración en días, si no hay → +1 mes
   useEffect(() => {
-    if (!touchedFin) setFechaFin(addMonthsStr(fechaInicio, 1));
-  }, [fechaInicio, touchedFin]);
+    if (touchedFin) return;
+    const dur = durationDaysFor(membresias, idMembresia);
+    if (dur) {
+      setFechaFin(addDaysStr(fechaInicio, dur)); // usa (dur - 1) si quieres inclusivo
+    } else {
+      setFechaFin(addMonthsStr(fechaInicio, 1));
+    }
+  }, [fechaInicio, touchedFin, idMembresia, membresias]);
 
   // Cargar membresías
   useEffect(() => {
-  let mounted = true;
-  setLoadingCat(true);
+    let mounted = true;
+    setLoadingCat(true);
 
-  getMembresias()
-    .then((res) => {
-      if (!mounted) return;
-      // res.data ya es Membresia[]
-      setMembresias(res.data);
-    })
-    .catch((e) => {
-      console.error(e);
-      if (mounted) setError("No se pudieron cargar las membresías.");
-    })
-    .finally(() => mounted && setLoadingCat(false));
+    getMembresias()
+      .then((res) => {
+        if (!mounted) return;
+        setMembresias(res.data);
+      })
+      .catch((e) => {
+        console.error(e);
+        if (mounted) setError("No se pudieron cargar las membresías.");
+      })
+      .finally(() => mounted && setLoadingCat(false));
 
-  return () => {
-    mounted = false;
-  };
-}, []);
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-
-  // Autocompletar desde membresía
+  // Autocompletar desde membresía + reiniciar sesiones + ajustar fecha fin con duración
   useEffect(() => {
     if (idMembresia === "") return;
     const m = membresias.find((x) => x.id === Number(idMembresia));
     const { precio, sesiones } = extractPrecioYSesiones(m);
     if (precio != null && Number.isFinite(precio)) setPrecioFinal(String(precio));
     if (sesiones != null && Number.isFinite(sesiones)) setSesionesRestantes(String(sesiones));
-  }, [idMembresia, membresias]);
+
+    // al seleccionar membresía, si el usuario no tocó fecha fin, calcúlala desde hoy/fechaInicio
+    const dur = durationDaysFor(membresias, idMembresia);
+    if (dur) {
+      setFechaFin(addDaysStr(fechaInicio, dur));
+      setTouchedFin(false);
+    } else {
+      setFechaFin(addMonthsStr(fechaInicio, 1));
+      setTouchedFin(false);
+    }
+  }, [idMembresia, membresias]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Asignar stream a video cuando camOn = true
   useEffect(() => {
@@ -265,7 +306,6 @@ export default function NuevoClienteConMembresia() {
     const di = parseDateOnlyLocal(fechaInicio);
     const df = parseDateOnlyLocal(fechaFin);
     if (!di || !df) return false;
-    
     di.setHours(0, 0, 0, 0);
     df.setHours(0, 0, 0, 0);
     return di.getTime() > df.getTime();
@@ -285,98 +325,91 @@ export default function NuevoClienteConMembresia() {
 
   // Submit
   const onSubmit = async (e: React.FormEvent) => { 
-  e.preventDefault();
-  setError(null);
-  setInfo(null);
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
 
-  if (dateInvalid) {
-    setError("La fecha de fin no puede ser anterior a la fecha de inicio.");
-    return;
-  }
-  if (precioInvalid) {
-    setError("El precio debe ser un número mayor o igual a 0.");
-    return;
-  }
-  if (!nombre.trim() || !apellido.trim() || !documento.trim()) {
-    setError("Nombre, apellido y documento son obligatorios.");
-    return;
-  }
-  if (idMembresia === "") {
-    setError("Selecciona una membresía.");
-    return;
-  }
-
-  setSaving(true);
-  try {
-    let fotografiaRuta = "";
-
-    if (fotoBase64) {
-      const ruta = await uploadBase64ToBackend(
-        documento.trim(),
-        fotoBase64,
-        "image/jpeg"
-      );
-      fotografiaRuta = ruta;
-      setInfo("Foto subida correctamente.");
+    if (dateInvalid) {
+      setError("La fecha de fin no puede ser anterior a la fecha de inicio.");
+      return;
+    }
+    if (precioInvalid) {
+      setError("El precio debe ser un número mayor o igual a 0.");
+      return;
+    }
+    if (!nombre.trim() || !apellido.trim() || !documento.trim()) {
+      setError("Nombre, apellido y documento son obligatorios.");
+      return;
+    }
+    if (idMembresia === "") {
+      setError("Selecciona una membresía.");
+      return;
     }
 
-    const payload: ClienteMembresiaPayload = {
-      cliente: {
-        nombre: nombre.trim(),
-        apellido: apellido.trim(),
-        documento: documento.trim(),
-        ...(fechaNacimiento ? { fecha_nacimiento: fechaNacimiento } : {}),
-        correo: correo.trim() || undefined,
-        telefono: telefono.trim() || undefined,
-        direccion: direccion.trim() || undefined,
-        fotografia: fotografiaRuta,
-        id_tipo_descuento:  1,
-        huella_base64: "",
-      },
-      venta: {
-        id_membresia: Number(idMembresia),
-        fecha_inicio: fechaInicio || undefined,
-        fecha_fin: fechaFin || undefined,
-        precio_final:
-          precioFinal.trim() === "" ? undefined : Number(precioFinal),
-        sesiones_restantes:
-          sesionesRestantes.trim() === ""
-            ? undefined
-            : Number(sesionesRestantes),
-        estado: "Activa" as EstadoMembresia,
-      },
-    };
+    setSaving(true);
+    try {
+      let fotografiaRuta = "";
 
-   
+      if (fotoBase64) {
+        const ruta = await uploadBase64ToBackend(
+          documento.trim(),
+          fotoBase64,
+          "image/jpeg"
+        );
+        fotografiaRuta = ruta;
+        setInfo("Foto subida correctamente.");
+      }
 
-    // Suponiendo que el backend devuelve el id del cliente creado en response.cliente.id
-    const res = await createClienteConMembresia(payload); // 👈 capturamos la respuesta
-    console.log("Respuesta createClienteConMembresia:", res.data);
+      const payload: ClienteMembresiaPayload = {
+        cliente: {
+          nombre: nombre.trim(),
+          apellido: apellido.trim(),
+          documento: documento.trim(),
+          ...(fechaNacimiento ? { fecha_nacimiento: fechaNacimiento } : {}),
+          correo: correo.trim() || undefined,
+          telefono: telefono.trim() || undefined,
+          direccion: direccion.trim() || undefined,
+          fotografia: fotografiaRuta,
+          id_tipo_descuento:  1,
+          huella_base64: "",
+        },
+        venta: {
+          id_membresia: Number(idMembresia),
+          fecha_inicio: fechaInicio || undefined,
+          fecha_fin: fechaFin || undefined,
+          precio_final:
+            precioFinal.trim() === "" ? undefined : Number(precioFinal),
+          sesiones_restantes:
+            sesionesRestantes.trim() === ""
+              ? undefined
+              : Number(sesionesRestantes),
+          estado: "activa" as EstadoMembresia,
+        },
+      };
 
-    // ✅ extraemos el id del cliente (asumiendo que la respuesta trae { cliente: {...}, venta: {...} })
-    const clienteId = res.data?.cliente?.id;
+      const res = await createClienteConMembresia(payload);
+      const clienteId = res.data?.cliente?.id;
 
-    if (clienteId) {
-      navigate(`/HuellaController/${clienteId}`);
-    } else {
-      // fallback si no devuelve id → lo dejamos como antes
-      navigate("/clientes/membresias");
+      if (clienteId) {
+        navigate(`/HuellaController/${clienteId}`);
+      } else {
+        navigate("/clientes/membresias");
+      }
+
+    } catch (e: any) {
+      console.error(e);
+      const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
+      setError(String(msg));
+      MySwal.fire({
+          icon: "error",
+          title: "¡Error al guardar!",
+          text: "Error al crear",
+          confirmButtonColor: "#d63030ff",
+        });
+    } finally {
+      setSaving(false);
     }
-
-  } catch (e: any) {
-    console.error(e);
-    const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
-    setError(String(msg));
-    MySwal.fire({
-        icon: "error",
-        title: "¡Error al guardar!",
-        text: "Error al crear",
-        confirmButtonColor: "#d63030ff",
-      });
-  } finally {
-    setSaving(false);
-  }
-};
+  };
      
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
@@ -384,7 +417,6 @@ export default function NuevoClienteConMembresia() {
       <header className="flex items-center justify-between mb-4">
         <h5 className="card-title">Nuevo cliente con membresía</h5>
 
-        {/* Volver (neutro) */}
         <Link
           to="/clientes/membresias"
           role="button"
@@ -621,7 +653,31 @@ export default function NuevoClienteConMembresia() {
                     id="id_membresia"
                     className={baseInput}
                     value={idMembresia}
-                    onChange={(e) => setIdMembresia(e.target.value ? Number(e.target.value) : "")}
+                    onChange={(e) => {
+                      const newId = e.target.value ? Number(e.target.value) : "";
+                      setIdMembresia(newId);
+
+                      // Reiniciar sesiones por defecto
+                      const defSessions = defaultSessionsFor(membresias, newId);
+                      if (defSessions != null && Number.isFinite(defSessions)) {
+                        setSesionesRestantes(String(defSessions));
+                      }
+
+                      // Autocompletar precio
+                      const m = membresias.find((x) => x.id === Number(newId));
+                      const { precio } = extractPrecioYSesiones(m);
+                      if (precio != null && Number.isFinite(precio)) setPrecioFinal(String(precio));
+
+                      // Ajustar fecha fin con duración
+                      const dur = durationDaysFor(membresias, newId);
+                      if (dur) {
+                        setFechaFin(addDaysStr(fechaInicio, dur)); // usa (dur - 1) si quieres inclusivo
+                        setTouchedFin(false);
+                      } else {
+                        setFechaFin(addMonthsStr(fechaInicio, 1));
+                        setTouchedFin(false);
+                      }
+                    }}
                     required
                   >
                     <option value="">Selecciona…</option>
@@ -642,7 +698,6 @@ export default function NuevoClienteConMembresia() {
                 aria-invalid={dateInvalid || undefined}
                 value={fechaInicio}
                 onChange={(e) => {
-                  // normaliza y asegura formato YYYY-MM-DD
                   const d = parseDateOnlyLocal(e.target.value);
                   setFechaInicio(d ? fmtDateInputLocal(d) : e.target.value);
                 }}
@@ -663,7 +718,6 @@ export default function NuevoClienteConMembresia() {
                       setFechaFin(d ? fmtDateInputLocal(d) : e.target.value);
                       setTouchedFin(true);
                     }}
-                    
                   />
                   {dateInvalid && (
                     <p className="mt-1 text-xs text-red-600">
