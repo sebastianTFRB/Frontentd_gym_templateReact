@@ -1,3 +1,4 @@
+// src/pages/Clientes/ResumenMembresias.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Table, Spinner, Badge, Dropdown, Progress } from "flowbite-react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
@@ -10,6 +11,12 @@ import {
   ResumenPage,
 } from "../../../api/membresias_resumen";
 import { API_BASE_URL } from "../../../api/apiConfig";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import {
+  updateVentaMembresia,
+  getVentaMembresia,
+} from "../../../api/venta_membresia";
 
 // ================== helpers comunes ==================
 function formatDate(s?: string | null) {
@@ -22,25 +29,22 @@ function parseDateOnlyLocal(s?: string | null): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (m) {
     const [, y, mo, d] = m;
-    // new Date(año, mes-1, día) --> crea medianoche LOCAL (sin desfases de zona)
     return new Date(Number(y), Number(mo) - 1, Number(d));
   }
-  // Si viene con hora/offset (ISO completo), dejamos que JS lo interprete.
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-// ===== helpers para foto (maneja rutas relativas, absolutas y base64)
+// ===== helpers para foto
 const API_BASE = API_BASE_URL;
 const API_ORIGIN = API_BASE.replace(/\/api\/v\d+\/?$/, "");
 
 function resolveFotoSrc(src?: string | null): string | null {
   if (!src) return null;
-  if (src.startsWith("data:")) return src; // ya viene como dataURL
-  if (/^https?:\/\//i.test(src)) return src; // URL absoluta
-  if (src.startsWith("/")) return API_ORIGIN + src; // ruta absoluta en el backend (/media/...)
-  if (src.startsWith("media/")) return `${API_ORIGIN}/${src}`; // ruta relativa (media/...)
-  // si no coincide con lo anterior, tratamos como base64 crudo
+  if (src.startsWith("data:")) return src;
+  if (/^https?:\/\//i.test(src)) return src;
+  if (src.startsWith("/")) return API_ORIGIN + src;
+  if (src.startsWith("media/")) return `${API_ORIGIN}/${src}`;
   return `data:image/jpeg;base64,${src}`;
 }
 
@@ -90,15 +94,10 @@ function clamp0to100(n: number) {
   return Math.max(0, Math.min(100, n));
 }
 
-/**
- * progress = (días_restantes / total_días) * 100
- * color: ≤5 red, 6–10 yellow, >10 green, "dark" si no hay fechas válidas
- */
 function progressByRemainingDays(
   fecha_inicio?: string | null,
   fecha_fin?: string | null
 ): { progress: number; color: "red" | "yellow" | "green" | "dark"; daysLeft: number } {
-  // ⚠️ Asegura que "hoy" sea medianoche local para evitar variaciones por hora del día
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -111,10 +110,8 @@ function progressByRemainingDays(
   if (!Number.isFinite(totalDays) || totalDays < 1) totalDays = 1;
 
   let remaining = ceilDaysDiff(today, end);
-  if (!Number.isFinite(remaining)) remaining = 0;
-
-  if (remaining > totalDays) remaining = totalDays;
-  if (remaining < 0) remaining = 0;
+  if (!Number.isNaN(remaining) && remaining > totalDays) remaining = totalDays;
+  if (!Number.isFinite(remaining) || remaining < 0) remaining = 0;
 
   const progress = clamp0to100((remaining / totalDays) * 100);
 
@@ -128,6 +125,8 @@ function progressByRemainingDays(
 
 // ================== componente ==================
 export default function ResumenMembresias() {
+  const MySwal = withReactContent(Swal);
+
   const [pageData, setPageData] = useState<ResumenPage<ResumenMembresia> | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -135,8 +134,8 @@ export default function ResumenMembresias() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  // filtro seleccionado (desde backend)
   const [filter, setFilter] = useState<ResumenFiltro>("todas");
+  const [rowLoading, setRowLoading] = useState<number | null>(null); // id_venta en actualización
 
   useEffect(() => {
     let mounted = true;
@@ -169,7 +168,6 @@ export default function ResumenMembresias() {
   const rows = useMemo<ResumenMembresia[]>(() => pageData?.items ?? [], [pageData]);
   const totalPages = pageData?.pages ?? 1;
   const totalItems = pageData?.total ?? 0;
-  const counts = pageData?.counts ?? { todas: 0, activas: 0, por_vencer: 0, vencidas: 0 };
 
   const badgeColor = (estado: string): "success" | "failure" | "gray" | "info" => {
     const e = (estado || "").toLowerCase();
@@ -179,20 +177,120 @@ export default function ResumenMembresias() {
     return "info";
   };
 
-  // ===== estilos pills filtro (brand dorado)
-  const pillBase =
-    "px-3 py-1.5 rounded-xl text-sm font-medium border transition-all";
+  const pillBase = "px-3 py-1.5 rounded-xl text-sm font-medium border transition-all";
   const pillActive =
     "text-black border-transparent bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)] shadow-[0_10px_18px_-10px_rgba(247,181,0,.45)]";
   const pillInactive =
     "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:border-gray-600";
+
+  // ===== update optimista por id_venta
+  const optimisticUpdate = (ventaId: number, nextSesiones: number) => {
+    setPageData((prev) => {
+      if (!prev) return prev;
+      const items = prev.items.map((it: any) =>
+        Number(it.id_venta) === Number(ventaId)
+          ? { ...it, sesiones_restantes: nextSesiones }
+          : it
+      );
+      return { ...prev, items };
+    });
+  };
+
+  // ===== RESTAR SESIÓN (usa id_venta y el id de cliente del row)
+  const handleRestarSesion = async (row: ResumenMembresia) => {
+    const ventaId = Number((row as any).id_venta); // <-- id de la venta
+    const clienteId = Number((row as any).id);      // <-- id del cliente (tu aclaración)
+    const nombre = `${(row as any).nombre} ${(row as any).apellido}`
+    if (!ventaId) {
+      await MySwal.fire({
+        icon: "error",
+        title: "No se encontró la venta",
+        text: "No se puede restar sesión porque falta 'id_venta'.",
+        confirmButtonColor: "#dd0404ff",
+      });
+      return;
+    }
+
+    const current = Number((row as any).sesiones_restantes ?? 0);
+    if (current <= 0) {
+      await MySwal.fire({
+        icon: "info",
+        title: "Sin sesiones",
+        text: "Esta membresía no tiene sesiones restantes para descontar.",
+        confirmButtonColor: "#d2dd04ff",
+      });
+      return;
+    }
+
+    const ok = await MySwal.fire({
+      icon: "question",
+      title: `¿Restar 1 sesión a ${nombre}?`,
+      text: `Sesiones: ${current} → ${current - 1}`,
+      showCancelButton: true,
+      confirmButtonText: "Sí, restar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#d2dd04ff",
+      cancelButtonColor: "#999999",
+    });
+    if (!ok.isConfirmed) return;
+
+    try {
+      setRowLoading(ventaId);
+
+      // 1) Traer la venta para completar el payload (id_membresia, precio_final, fechas, estado)
+      const ventaRes = await getVentaMembresia(ventaId);
+      const v = ventaRes.data;
+
+      // 2) Armamos el payload EXACTO que pide el endpoint
+      const payload = {
+        // 👇 Usamos el id del cliente que viene en el resumen (tu aclaración)
+        id_cliente: clienteId,
+
+        id_membresia: Number(v.id_membresia),
+        fecha_inicio: (v.fecha_inicio || (row as any).fecha_inicio || "").toString().slice(0, 10),
+        fecha_fin: (v.fecha_fin || (row as any).fecha_fin || "").toString().slice(0, 10),
+        precio_final:
+          v.precio_final != null
+            ? Number(v.precio_final)
+            : (row as any).precio != null
+            ? Number((row as any).precio)
+            : 0,
+        estado: String(v.estado || (row as any).estado || "activa"),
+        sesiones_restantes: current - 1,
+      };
+
+      // 3) UI optimista
+      optimisticUpdate(ventaId, current - 1);
+
+      // 4) PUT
+      await updateVentaMembresia(ventaId, payload);
+
+      await MySwal.fire({
+        icon: "success",
+        title: "Sesión restada",
+        text: "Se actualizó correctamente.",
+        confirmButtonColor: "#d2dd04ff",
+      });
+    } catch (e: any) {
+      // revert
+      optimisticUpdate(ventaId, current);
+      console.error(e);
+      await MySwal.fire({
+        icon: "error",
+        title: "Error",
+        text: e?.message || "No se pudo actualizar.",
+        confirmButtonColor: "#dd0404ff",
+      });
+    } finally {
+      setRowLoading(null);
+    }
+  };
 
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
       <header className="flex items-center justify-between gap-3 flex-wrap">
         <h5 className="card-title">Resumen de membresías</h5>
 
-        {/* Botón "+ Nuevo" con gradiente dorado */}
         <Link
           to="/clientes/new-with-membresia"
           role="button"
@@ -210,7 +308,6 @@ export default function ResumenMembresias() {
 
       {/* Filtros + Search */}
       <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
-        {/* Pills de filtro (usan conteos del backend) */}
         <div className="flex items-center gap-2">
           <button
             className={`${pillBase} ${filter === "todas" ? pillActive : pillInactive}`}
@@ -254,7 +351,7 @@ export default function ResumenMembresias() {
           </button>
         </div>
 
-        {/* Search 1/2 de ancho en md+ */}
+        {/* Search */}
         <div className="w-full md:w-1/2">
           <div className="flex form-control form-rounded-xl">
             <div className="relative w-full">
@@ -302,8 +399,11 @@ export default function ResumenMembresias() {
               <Table.Body className="divide-y divide-border dark:divide-darkborder">
                 {rows.map((r) => {
                   const precioFmt =
-                    r.precio != null
-                      ? Number(r.precio).toLocaleString("es-CO", { style: "currency", currency: "COP" })
+                    (r as any).precio != null
+                      ? Number((r as any).precio).toLocaleString("es-CO", {
+                          style: "currency",
+                          currency: "COP",
+                        })
                       : "—";
 
                   const { progress, color, daysLeft } = progressByRemainingDays(
@@ -311,30 +411,33 @@ export default function ResumenMembresias() {
                     r.fecha_fin as any
                   );
                   const daysDisplay =
-                    typeof r.days_left === "number" && Number.isFinite(r.days_left)
-                      ? Math.max(0, Math.round(r.days_left))
+                    typeof (r as any).days_left === "number" && Number.isFinite((r as any).days_left)
+                      ? Math.max(0, Math.round((r as any).days_left))
                       : daysLeft;
+
+                  const ventaIdForRow = Number((r as any).id_venta);
+                  const isRowLoading = rowLoading != null && ventaIdForRow === rowLoading;
 
                   return (
                     <Table.Row
-                      key={r.id}
+                      key={ventaIdForRow || (r as any).id}
                       className="hover:bg-[rgba(255,213,74,0.06)] transition-colors"
                     >
-                      <Table.Cell>{r.id}</Table.Cell>
+                      <Table.Cell>{(r as any).id}</Table.Cell>
 
                       <Table.Cell>
-                        <Link to={`/clientes/${r.id}/editar-membresia`} className="hover:underline">
-                          <Foto src={r.foto} />
+                        <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="hover:underline">
+                          <Foto src={(r as any).foto} />
                         </Link>
                       </Table.Cell>
 
                       <Table.Cell className="whitespace-nowrap ps-6">
-                        <Link to={`/clientes/${r.id}/editar-membresia`} className="hover:underline">
+                        <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="hover:underline">
                           <h5 className="text-base text-wrap">
-                            {r.nombre} {r.apellido}
+                            {(r as any).nombre} {(r as any).apellido}
                           </h5>
                           <div className="text-sm font-medium text-dark opacity-70 mb-2 text-wrap">
-                            CC. {r.documento}
+                            CC. {(r as any).documento}
                           </div>
                         </Link>
                       </Table.Cell>
@@ -356,10 +459,10 @@ export default function ResumenMembresias() {
                       </Table.Cell>
 
                       <Table.Cell>
-                        <Badge color={badgeColor(r.estado)}>{r.estado}</Badge>
+                        <Badge color={badgeColor((r as any).estado)}>{(r as any).estado}</Badge>
                       </Table.Cell>
 
-                      <Table.Cell>{r.sesiones_restantes ?? "—"}</Table.Cell>
+                      <Table.Cell>{(r as any).sesiones_restantes ?? "—"}</Table.Cell>
 
                       <Table.Cell>
                         <Dropdown
@@ -371,12 +474,30 @@ export default function ResumenMembresias() {
                             </span>
                           )}
                         >
-                          <Link to={`/clientes/${r.id}/editar-membresia`} className="w-full">
+                          <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="w-full">
                             <Dropdown.Item className="flex gap-3">
                               <Icon icon="solar:pen-new-square-broken" height={18} />
                               <span>Editar</span>
                             </Dropdown.Item>
                           </Link>
+
+                          <Dropdown.Item
+                            className="flex gap-3 disabled:opacity-50"
+                            onClick={() => handleRestarSesion(r)}
+                            disabled={isRowLoading || Number((r as any).sesiones_restantes ?? 0) <= 0}
+                          >
+                            {isRowLoading ? (
+                              <>
+                                <Spinner size="sm" />
+                                <span>Restando…</span>
+                              </>
+                            ) : (
+                              <>
+                                <Icon icon="solar:minus-square-linear" height={18} />
+                                <span>Restar sesión</span>
+                              </>
+                            )}
+                          </Dropdown.Item>
 
                           <Link to="/clientes/new-with-membresia" className="w-full">
                             <Dropdown.Item className="flex gap-3">
@@ -392,7 +513,7 @@ export default function ResumenMembresias() {
               </Table.Body>
             </Table>
 
-            {/* Paginación con iconos y dorado */}
+            {/* Paginación */}
             {totalPages > 1 && (
               <nav className="mt-4 flex items-center justify-between md:justify-end gap-3" aria-label="Paginación">
                 <button

@@ -38,13 +38,14 @@ const AddClient = lazy(() => import('../views/addClient/AddClient'));
 const HuellaController = lazy(() => import('../views/huellaController/HuellaController'));
 const MembresiaAdd  = lazy(() => import('../views/Membresia/MembresiaAdd'));
 const ReportesDashboard = lazy(() => import("../views/dashboards/ReportesDashboard"));
+const AsistenciaView = lazy(() => import('../views/Asistencias/ResumenAsistencias'));
 
 const Router = [
   {
     path: '/',
     element: <FullLayout />,
     children: [
-      { path: '/', exact: true, element: <Dashboard /> },
+      { path: '/', exact: true, element: <ReportesDashboard /> },
       { path: '/ui/typography', exact: true, element: <Typography /> },
       { path: '/ui/table', exact: true, element: <Table /> },
       { path: '/ui/form', exact: true, element: <Form /> },
@@ -65,6 +66,7 @@ const Router = [
       { path: '/HuellaController/:id', exact: true, element: <HuellaController /> },
       { path: '/add-membresia', exact: true, element: <MembresiaAdd /> },
       { path: "/dashboard", element: <ReportesDashboard /> },
+      { path: "/asistencias", element: <AsistenciaView /> },
       
       { path: '*', element: <Navigate to="/auth/404" /> },
     ],
