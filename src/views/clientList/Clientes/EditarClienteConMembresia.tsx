@@ -49,7 +49,7 @@ function addMonthsStr(isoDate: string, months: number) {
   return fmtDateInputLocal(base);
 }
 
-// suma días completos en local (usa days-1 si quieres inclusivo)
+// suma días completos en local
 function addDaysStr(isoDate: string, days: number) {
   const d0 = parseDateOnlyLocal(isoDate);
   if (!d0) return isoDate;
@@ -136,6 +136,18 @@ function durationDaysFor(membresias: Membresia[], id?: number | ""): number | un
   if (!m) return undefined;
   const n = (m.duracion_dias ?? m.dias_duracion ?? m.dias ?? m.dias_vigencia) as number | undefined;
   return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** ✅ Calcula fecha fin según días de la membresía; fallback +1 mes */
+function calcFechaFinPorMembresia(
+  inicioISO: string,
+  membresias: Membresia[],
+  idMembresia: number | ""
+) {
+  const dur = durationDaysFor(membresias, idMembresia);
+  // ← usa (dur - 1) si quieres inclusivo (01 + 29 = 30 días del 01 al 30)
+  if (dur && dur > 0) return addDaysStr(inicioISO, dur);
+  return addMonthsStr(inicioISO, 1);
 }
 
 /* ===================== Componente ===================== */
@@ -340,7 +352,8 @@ export default function EditarClienteConMembresia() {
           const df = parseDateOnlyLocal(last.fecha_fin);
           if (df) {
             setFechaFin(fmtDateInputLocal(df));
-            setTouchedFin(true);
+            // 👇 importante: NO marcar touchedFin aquí, para permitir auto-cálculo al cambiar inicio
+            // setTouchedFin(true);
           }
         }
         setPrecioFinal(last.precio_final != null ? String(last.precio_final) : "");
@@ -370,17 +383,12 @@ export default function EditarClienteConMembresia() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId]);
 
-  // Si el usuario NO tocó fecha fin, actualiza al cambiar inicio:
-  // usa duración en días de la membresía si existe, si no, +1 mes
+  // 🔁 Autocalcular fecha_fin cuando cambia fecha_inicio o membresía (si el usuario no tocó manualmente fecha_fin)
   useEffect(() => {
     if (touchedFin) return;
-    const dur = durationDaysFor(membresias, idMembresia);
-    if (dur) {
-      setFechaFin(addDaysStr(fechaInicio, dur)); // usa (dur - 1) si deseas inclusivo
-    } else {
-      setFechaFin(addMonthsStr(fechaInicio, 1));
-    }
-  }, [fechaInicio, touchedFin, idMembresia, membresias]);
+    const nuevoFin = calcFechaFinPorMembresia(fechaInicio, membresias, idMembresia);
+    setFechaFin(nuevoFin);
+  }, [fechaInicio, idMembresia, membresias, touchedFin]);
 
   // Autocompletar precio SOLO si el usuario cambia la membresía
   useEffect(() => {
@@ -477,14 +485,10 @@ export default function EditarClienteConMembresia() {
         confirmButtonColor: "#d2dd04ff",
       });
 
-      // 👇 permanecer en la misma pantalla y refrescar datos
+      // permanecer en la misma pantalla y refrescar datos
       await loadData(clienteId);
-      setTouchedFin(true);           // mantenemos la fecha fin estable tras recarga
-      setUserChangedMembresia(false); // y evitamos autocompletar accidental
-
-      // opcional: subir al inicio de la página
-      // window.scrollTo({ top: 0, behavior: "smooth" });
-
+      // No marcamos touchedFin aquí para que siga autoajustando si cambias inicio
+      setUserChangedMembresia(false);
     } catch (e: any) {
       console.error(e);
       const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
@@ -734,21 +738,16 @@ export default function EditarClienteConMembresia() {
                       setIdMembresia(newId);
                       setUserChangedMembresia(true);
 
-                      // Reiniciar sesiones por defecto
+                      // Reiniciar sesiones por defecto (si deseas)
                       const defSessions = defaultSessionsFor(membresias, newId);
                       if (defSessions != null && Number.isFinite(defSessions)) {
                         setSesionesRestantes(String(defSessions));
                       }
 
                       // Ajustar fin según días de duración; si no hay, +1 mes
-                      const dur = durationDaysFor(membresias, newId);
-                      if (dur) {
-                        setFechaFin(addDaysStr(fechaInicio, dur)); // usa (dur - 1) si deseas inclusivo
-                        setTouchedFin(false);
-                      } else {
-                        setFechaFin(addMonthsStr(fechaInicio, 1));
-                        setTouchedFin(false);
-                      }
+                      const nuevoFin = calcFechaFinPorMembresia(fechaInicio, membresias, newId);
+                      setFechaFin(nuevoFin);
+                      setTouchedFin(false);
                     }}
                     required
                   >
@@ -771,7 +770,13 @@ export default function EditarClienteConMembresia() {
                     value={fechaInicio}
                     onChange={(e) => {
                       const d = parseDateOnlyLocal(e.target.value);
-                      setFechaInicio(d ? fmtDateInputLocal(d) : e.target.value);
+                      const nuevoInicio = d ? fmtDateInputLocal(d) : e.target.value;
+                      setFechaInicio(nuevoInicio);
+
+                      // Recalcular fin según membresía actual
+                      const nuevoFin = calcFechaFinPorMembresia(nuevoInicio, membresias, idMembresia);
+                      setFechaFin(nuevoFin);
+                      setTouchedFin(false); // seguimos autoajustando si cambian inicio/membresía
                     }}
                   />
                 </div>
@@ -789,7 +794,7 @@ export default function EditarClienteConMembresia() {
                     onChange={(e) => {
                       const d = parseDateOnlyLocal(e.target.value);
                       setFechaFin(d ? fmtDateInputLocal(d) : e.target.value);
-                      setTouchedFin(true);
+                      setTouchedFin(true); // usuario tomó control manual
                     }}
                   />
                   {dateInvalid && (
