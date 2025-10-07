@@ -19,7 +19,9 @@ import { API_BASE_URL } from "../../../api/apiConfig";
 /* ===================== Helpers fecha ===================== */
 function todayStr() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
 }
 
 // formatea Date a "YYYY-MM-DD" en local
@@ -138,14 +140,14 @@ function durationDaysFor(membresias: Membresia[], id?: number | ""): number | un
   return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
-/** ✅ Calcula fecha fin según días de la membresía; fallback +1 mes */
+/** Calcula fecha fin según días de la membresía; fallback +1 mes */
 function calcFechaFinPorMembresia(
   inicioISO: string,
   membresias: Membresia[],
   idMembresia: number | ""
 ) {
   const dur = durationDaysFor(membresias, idMembresia);
-  // ← usa (dur - 1) si quieres inclusivo (01 + 29 = 30 días del 01 al 30)
+  // Usa (dur - 1) si deseas inclusivo (ej. del 01 al 30 con 30 días)
   if (dur && dur > 0) return addDaysStr(inicioISO, dur);
   return addMonthsStr(inicioISO, 1);
 }
@@ -352,8 +354,7 @@ export default function EditarClienteConMembresia() {
           const df = parseDateOnlyLocal(last.fecha_fin);
           if (df) {
             setFechaFin(fmtDateInputLocal(df));
-            // 👇 importante: NO marcar touchedFin aquí, para permitir auto-cálculo al cambiar inicio
-            // setTouchedFin(true);
+            setTouchedFin(true); // ✅ respeta la fecha del backend
           }
         }
         setPrecioFinal(last.precio_final != null ? String(last.precio_final) : "");
@@ -383,7 +384,8 @@ export default function EditarClienteConMembresia() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId]);
 
-  // 🔁 Autocalcular fecha_fin cuando cambia fecha_inicio o membresía (si el usuario no tocó manualmente fecha_fin)
+  // Autocalcular fecha_fin cuando cambia fecha_inicio o membresía,
+  // SOLO si el usuario no la ha tocado manualmente y si no venía del backend marcada.
   useEffect(() => {
     if (touchedFin) return;
     const nuevoFin = calcFechaFinPorMembresia(fechaInicio, membresias, idMembresia);
@@ -487,7 +489,7 @@ export default function EditarClienteConMembresia() {
 
       // permanecer en la misma pantalla y refrescar datos
       await loadData(clienteId);
-      // No marcamos touchedFin aquí para que siga autoajustando si cambias inicio
+      // volvemos a permitir auto-cálculo SOLO si el usuario cambia algo luego
       setUserChangedMembresia(false);
     } catch (e: any) {
       console.error(e);
@@ -745,9 +747,9 @@ export default function EditarClienteConMembresia() {
                       }
 
                       // Ajustar fin según días de duración; si no hay, +1 mes
+                      setTouchedFin(false); // rehabilita auto-cálculo
                       const nuevoFin = calcFechaFinPorMembresia(fechaInicio, membresias, newId);
                       setFechaFin(nuevoFin);
-                      setTouchedFin(false);
                     }}
                     required
                   >
@@ -774,9 +776,9 @@ export default function EditarClienteConMembresia() {
                       setFechaInicio(nuevoInicio);
 
                       // Recalcular fin según membresía actual
+                      setTouchedFin(false); // re-habilita auto-cálculo
                       const nuevoFin = calcFechaFinPorMembresia(nuevoInicio, membresias, idMembresia);
                       setFechaFin(nuevoFin);
-                      setTouchedFin(false); // seguimos autoajustando si cambian inicio/membresía
                     }}
                   />
                 </div>
