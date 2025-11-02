@@ -1,54 +1,56 @@
-
-import {  Sidebar } from "flowbite-react";
+import { Sidebar } from "flowbite-react";
 import SidebarContent from "./Sidebaritems";
 import NavItems from "./NavItems";
-// @ts-ignore
-import SimpleBar from "simplebar-react";
 import React from "react";
-// import Upgrade from "./Upgrade";
 import NavCollapse from "./NavCollapse";
 
 const SidebarLayout = () => {
-
-
   return (
     <>
       <div className="xl:block hidden">
         <Sidebar
-          className="fixed menu-sidebar  bg-white dark:bg-darkgray rtl:pe-4 rtl:ps-0 top-[90px]"
           aria-label="Sidebar with multi-level dropdown example"
+          className="
+            fixed left-0 top-[90px]
+            h-[calc(100dvh-90px)]
+            w-72
+            bg-white dark:bg-darkgray
+            menu-sidebar
+            flex flex-col
+            min-h-0
+          "
         >
-          <div className="px-6 py-4 flex items-center bg-white">
+          {/* Header (no scrollea) */}
+          <div className="px-6 py-4 flex items-center bg-white dark:bg-darkgray shrink-0">
             <h2>MeintroLab.SAS</h2>
           </div>
-          <SimpleBar className="h-[calc(100vh_-_294px)]">
+
+          {/* Body (sí scrollea) */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             <Sidebar.Items className="px-5 mt-2">
               <Sidebar.ItemGroup className="sidebar-nav hide-menu">
-                {SidebarContent &&
-                  SidebarContent?.map((item, index) => (
-                    <div className="caption" key={item.heading}>
-                      <React.Fragment key={index}>
-                        <h5 className="text-link dark:text-white/70 caption font-semibold leading-6 tracking-widest text-xs pb-2 uppercase">
-                          {item.heading}
-                        </h5>
-                        {item.children?.map((child, index) => (
-                        <React.Fragment key={child.id && index}>
-                          {child.children ? (
-                            <div className="collpase-items">
-                              <NavCollapse item={child} />
-                            </div>
-                          ) : (
-                            <NavItems item={child} />
-                          )}
-                        </React.Fragment>
-                      ))}
+                {SidebarContent?.map((item) => (
+                  <div className="caption" key={item.heading}>
+                    <h5 className="text-link dark:text-white/70 caption font-semibold leading-6 tracking-widest text-xs pb-2 uppercase">
+                      {item.heading}
+                    </h5>
+
+                    {item.children?.map((child, index) => (
+                      <React.Fragment key={(child.id ?? index) as React.Key}>
+                        {child.children ? (
+                          <div className="collpase-items">
+                            <NavCollapse item={child} />
+                          </div>
+                        ) : (
+                          <NavItems item={child} />
+                        )}
                       </React.Fragment>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                ))}
               </Sidebar.ItemGroup>
             </Sidebar.Items>
-          </SimpleBar>
-          {/* <Upgrade/> */}
+          </div>
         </Sidebar>
       </div>
     </>

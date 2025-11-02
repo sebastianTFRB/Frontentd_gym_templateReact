@@ -31,7 +31,6 @@ function formatDateForAccess(s?: string | null) {
   if (!s) return "—";
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return "—";
-  // dd/mm/yyyy
   return d.toLocaleDateString("es-CO");
 }
 function timeHHmm(s?: string | null) {
@@ -111,39 +110,36 @@ export default function ResumenAsistencias() {
   const [err, setErr] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
-    const loadData = async () => {
-        setLoading(true);
-        setErr(null);
-        try {
-        const res = await getAsistencias({ date: todayStr() });
-        let data = Array.isArray(res.data) ? res.data : [];
+  const loadData = async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await getAsistencias({ date: todayStr() });
+      let data = Array.isArray(res.data) ? res.data : [];
 
-        // 🔹 filtro local: solo asistencias con fecha_hora_entrada = HOY
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
 
-        data = data.filter((a) => {
-            const fh = new Date(a.fecha_hora_entrada);
-            return fh >= today && fh < tomorrow;
-        });
+      data = data.filter((a) => {
+        const fh = new Date(a.fecha_hora_entrada);
+        return fh >= today && fh < tomorrow;
+      });
 
-        // recientes primero
-        data.sort(
-            (a, b) =>
-            new Date(b.fecha_hora_entrada).getTime() - new Date(a.fecha_hora_entrada).getTime()
-        );
+      data.sort(
+        (a, b) =>
+          new Date(b.fecha_hora_entrada).getTime() - new Date(a.fecha_hora_entrada).getTime()
+      );
 
-        setRows(data);
-        } catch (e) {
-        console.error(e);
-        setErr("No se pudieron cargar las asistencias del día.");
-        } finally {
-        setLoading(false);
-        }
-    };
-
+      setRows(data);
+    } catch (e) {
+      console.error(e);
+      setErr("No se pudieron cargar las asistencias del día.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -161,63 +157,40 @@ export default function ResumenAsistencias() {
     });
   }, [rows, query]);
 
-    const onDelete = async (id: number, nombre: string) => {
-        const result = await MySwal.fire({
-        icon: "warning",
-        title: `¿Eliminar asistencia de ${nombre}?`,
-        text: "Esta acción no se puede deshacer.",
-        showCancelButton: true,
-        confirmButtonText: "Sí, eliminar",
-        cancelButtonText: "Cancelar",
+  const onDelete = async (id: number, nombre: string) => {
+    const result = await MySwal.fire({
+      icon: "warning",
+      title: `¿Eliminar asistencia de ${nombre}?`,
+      text: "Esta acción no se puede deshacer.",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dd0404ff",
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      await deleteAsistencia(id);
+      await MySwal.fire({
+        icon: "success",
+        title: "Eliminada",
+        text: `La asistencia de ${nombre} fue eliminada.`,
+        confirmButtonColor: "#d2dd04ff",
+      });
+      loadData();
+    } catch (e) {
+      console.error(e);
+      MySwal.fire({
+        icon: "error",
+        title: "Error",
+        text: `No se pudo eliminar la asistencia de ${nombre}.`,
         confirmButtonColor: "#dd0404ff",
-        });
-        if (!result.isConfirmed) return;
-
-        try {
-        await deleteAsistencia(id);
-        await MySwal.fire({
-            icon: "success",
-            title: "Eliminada",
-            text: `La asistencia de ${nombre} fue eliminada.`,
-            confirmButtonColor: "#d2dd04ff",
-        });
-        loadData();
-        } catch (e) {
-        console.error(e);
-        MySwal.fire({
-            icon: "error",
-            title: "Error",
-            text: `No se pudo eliminar la asistencia de ${nombre}.`,
-            confirmButtonColor: "#dd0404ff",
-        });
-        }
-    };
-
-
-  const VenceBadge = ({ fechaFin }: { fechaFin?: string | null }) => {
-    const left = daysLeftFromToday(fechaFin);
-    const color = vencimientoColor(left);
-    const fechaFmt = formatDate(fechaFin);
-
-    let cls = "bg-gray-300 text-black";
-    if (color === "green") cls = "bg-emerald-600 text-white";
-    if (color === "yellow") cls = "bg-amber-500 text-black";
-    if (color === "red") cls = "bg-red-600 text-white";
-
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${cls}`}>
-        <Icon icon="solar:calendar-linear" width={14} height={14} />
-        Vence: {fechaFmt}
-        {left !== null && Number.isFinite(left) && (
-          <span className="ms-1 opacity-90">({Math.max(0, left)} d)</span>
-        )}
-      </span>
-    );
+      });
+    }
   };
 
   const TipoChip = ({ tipo }: { tipo?: string | null }) => {
     const t = (tipo || "").toUpperCase();
-    // puedes mapear colores por tipo si quieres distinguir más
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-emerald-600 text-white">
         <Icon icon="solar:fingerprint-linear" width={14} height={14} />
@@ -240,11 +213,30 @@ export default function ResumenAsistencias() {
     );
   };
 
+  const EstadoAcceso = ({ motivo }: { motivo?: string | null }) => {
+    if (motivo) {
+      return (
+        <div className="flex flex-col items-start">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-red-600 text-white">
+            <Icon icon="solar:danger-triangle-outline" width={14} height={14} />
+            Acceso NO permitido
+          </span>
+          <span className="text-sm text-red-600 mt-1 italic">{motivo}</span>
+        </div>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-emerald-600 text-white">
+        <Icon icon="solar:check-circle-outline" width={14} height={14} />
+        Acceso permitido
+      </span>
+    );
+  };
+
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
       <header className="flex items-center justify-between gap-3 flex-wrap">
         <h5 className="card-title">Asistencias de hoy</h5>
-
         <button
           type="button"
           onClick={loadData}
@@ -252,8 +244,7 @@ export default function ResumenAsistencias() {
                      leading-[normal] font-medium text-black
                      bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
                      rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
-                     focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
+                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all"
         >
           <Icon icon="solar:refresh-outline" width="18" height="18" />
           <span>Actualizar</span>
@@ -262,21 +253,14 @@ export default function ResumenAsistencias() {
 
       {/* Search */}
       <div className="mt-3 w-full md:w-1/2">
-        <div className="flex form-control form-rounded-xl">
-          <div className="relative w-full">
-            <input
-              id="search"
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar por nombre, documento, tipo, hora…"
-              aria-label="Buscar"
-              className="block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900
-                         focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white
-                         dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg"
-            />
-          </div>
-        </div>
+        <input
+          id="search"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por nombre, documento, tipo, hora…"
+          className="block w-full border border-gray-300 bg-gray-50 text-gray-900 p-2.5 text-sm rounded-lg"
+        />
       </div>
 
       <div className="mt-3">
@@ -292,10 +276,11 @@ export default function ResumenAsistencias() {
         ) : (
           <Table hoverable>
             <Table.Head>
-              <Table.HeadCell className="p-6">Id</Table.HeadCell>
+              <Table.HeadCell>Id</Table.HeadCell>
               <Table.HeadCell>Foto</Table.HeadCell>
               <Table.HeadCell>Nombre</Table.HeadCell>
               <Table.HeadCell>Acceso</Table.HeadCell>
+              <Table.HeadCell>Estado</Table.HeadCell>
               <Table.HeadCell>Sesiones</Table.HeadCell>
               <Table.HeadCell />
             </Table.Head>
@@ -305,29 +290,19 @@ export default function ResumenAsistencias() {
                 const nombre = `${a.cliente?.nombre ?? ""} ${a.cliente?.apellido ?? ""}`.trim() || `Cliente #${a.id_cliente}`;
                 const doc = a.cliente?.documento ?? "—";
                 const sesiones = a.venta?.sesiones_restantes ?? "—";
-                const fin = a.venta?.fecha_fin;
 
                 return (
                   <Table.Row key={a.id} className="hover:bg-[rgba(255,213,74,0.06)] transition-colors">
                     <Table.Cell>{a.id}</Table.Cell>
-
-                    <Table.Cell>
-                      <Foto src={a.cliente?.fotografia} />
-                    </Table.Cell>
+                    <Table.Cell><Foto src={a.cliente?.fotografia} /></Table.Cell>
 
                     <Table.Cell className="whitespace-nowrap ps-6">
                       <h5 className="text-base text-wrap">{nombre}</h5>
                       <div className="text-sm font-medium text-dark opacity-70">CC. {doc}</div>
-                      <div className="mt-1">
-                        <VenceBadge fechaFin={fin} />
-                      </div>
                     </Table.Cell>
 
-                    {/* Acceso compacto (fecha • hora + tipo) */}
-                    <Table.Cell className="whitespace-nowrap ps-6">
-                      <AccesoCompact fh={a.fecha_hora_entrada} tipo={a.tipo_acceso} />
-                    </Table.Cell>
-
+                    <Table.Cell><AccesoCompact fh={a.fecha_hora_entrada} tipo={a.tipo_acceso} /></Table.Cell>
+                    <Table.Cell><EstadoAcceso motivo={a.motivo_error} /></Table.Cell>
                     <Table.Cell>{sesiones}</Table.Cell>
 
                     <Table.Cell>
@@ -341,11 +316,11 @@ export default function ResumenAsistencias() {
                         )}
                       >
                         <Dropdown.Item
-                        className="flex gap-3 text-red-600"
-                        onClick={() => onDelete(a.id, `${a.cliente?.nombre ?? ""} ${a.cliente?.apellido ?? ""}`.trim() || `Cliente #${a.id_cliente}`)}
+                          className="flex gap-3 text-red-600"
+                          onClick={() => onDelete(a.id, nombre)}
                         >
-                        <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
-                        <span>Eliminar</span>
+                          <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
+                          <span>Eliminar</span>
                         </Dropdown.Item>
                       </Dropdown>
                     </Table.Cell>
