@@ -32,17 +32,65 @@ export function GymNotification({
     return () => clearTimeout(timer);
   }, [onClose]);
 
+  // 🔊 VOZ dinámica según estado del cliente
+  useEffect(() => {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+
+    let texto = "";
+
+    if (!permitido) {
+      // ❌ ACCESO DENEGADO
+      texto = `${nombre}. ${mensaje}`;
+    } else {
+      // ✅ ACCESO PERMITIDO
+      const partes: string[] = [`Bienvenido, ${nombre}.`];
+
+      // 🔸 Última sesión
+      if (sesionesRestantes === 1) {
+        partes.push("Esta es tu última sesión.");
+      }
+      // 🔸 Pocas sesiones
+      else if (sesionesRestantes !== null && sesionesRestantes <= 5) {
+        partes.push(`Te quedan ${sesionesRestantes} sesiones.`);
+      }
+
+      // 🔸 Membresía próxima a vencer
+      if (diasRestantes !== null && diasRestantes <= 5) {
+        const hoy = new Date();
+        const fechaVencimiento = new Date();
+        fechaVencimiento.setDate(hoy.getDate() + diasRestantes);
+        const fechaFormateada = fechaVencimiento.toLocaleDateString("es-CO", {
+          day: "numeric",
+          month: "long",
+        });
+        partes.push(`Tu membresía vence el ${fechaFormateada}.`);
+      }
+
+      // 🔸 Si no hay advertencias
+      if (partes.length === 1) partes.push("Acceso permitido.");
+
+      texto = partes.join(" ");
+    }
+
+    const utter = new SpeechSynthesisUtterance(texto);
+    utter.lang = "es-CO";
+    utter.rate = permitido ? 1.05 : 0.95; // un poco más pausado si es denegado
+    utter.pitch = permitido ? 1.1 : 0.9; // tono más cálido si es acceso permitido
+    utter.volume = 1;
+
+    synth.cancel();
+    synth.speak(utter);
+  }, [nombre, permitido, mensaje, sesionesRestantes, diasRestantes]);
+
   // 🔹 Determinar color según estado
   let bgColor = "from-green-500/90 to-green-700/90";
   let Icon = CheckCircle2;
 
-  // 🚫 Denegado
   if (!permitido) {
     bgColor = "from-red-500/90 to-red-700/90";
     Icon = XCircle;
-  }
-  // ⚠️ Advertencia: membresía próxima a vencer o sesiones bajas
-  else if (
+  } else if (
     (diasRestantes !== null && diasRestantes <= 5) ||
     (sesionesRestantes !== null && sesionesRestantes <= 5)
   ) {
