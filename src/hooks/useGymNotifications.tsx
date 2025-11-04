@@ -1,33 +1,43 @@
 import { useEffect } from "react";
+import { useNotificationsStore } from "../store/notificationsStore";
 import ReactDOM from "react-dom/client";
 import { GymNotification } from "../components/GymNotification";
 
-/**
- * Hook global para escuchar el WebSocket del backend y mostrar
- * notificaciones de acceso en tiempo real (permitido / denegado).
- */
 export function useGymNotifications() {
+  const addNotification = useNotificationsStore((state) => state.addNotification);
+
   useEffect(() => {
+    let ws: WebSocket | null = null;
+
     function connect() {
       const host = window.location.hostname;
-      const ws = new WebSocket(`ws://${host}:8000/ws/events`);
+      ws = new WebSocket(`ws://${host}:8000/ws/events`);
 
       ws.onopen = () => console.log("✅ Conectado al WebSocket del gimnasio");
 
       ws.onmessage = (event) => {
-        if (event.data === "ping") return; // mantener viva la conexión
+        if (event.data === "ping") return;
 
         try {
           const payload = JSON.parse(event.data);
-
-          // Si el mensaje viene de MQTT reenviado (tópico global)
           if (payload.topic?.includes("/event")) {
             const data = payload.data;
-            showGymNotification(data);
-          }
-          // Si el backend envía directamente el objeto enriquecido
-          else if (payload.permitido !== undefined) {
-            showGymNotification(payload);
+            const id = data.id || Date.now();
+
+            const notif = {
+              id,
+              nombre: data.nombre,
+              mensaje: data.mensaje,
+              foto: data.foto,
+              permitido: data.permitido,
+              tipoMembresia: data.tipo_membresia,
+              sesionesRestantes: data.sesiones_restantes,
+              diasRestantes: data.dias_restantes,
+              hora: data.hora,
+            };
+
+            addNotification(notif);
+            showGymNotification(notif);
           }
         } catch (err) {
           console.error("⚠️ Error procesando evento:", err);
@@ -35,36 +45,22 @@ export function useGymNotifications() {
       };
 
       ws.onclose = () => {
-        console.warn("🔌 WebSocket cerrado. Reintentando...");
+        console.warn("🔌 WebSocket cerrado. Reintentando en 5s...");
         setTimeout(connect, 5000);
       };
 
       ws.onerror = (err) => {
         console.error("❌ Error en WebSocket:", err);
-        ws.close();
+        ws?.close();
       };
     }
 
     connect();
-  }, []);
+    return () => ws?.close();
+  }, [addNotification]);
 }
 
-/**
- * Renderiza dinámicamente una notificación en pantalla.
- * El color depende de si el acceso fue permitido o no.
- */
 function showGymNotification(data: any) {
-  const {
-    nombre,
-    permitido,
-    mensaje,
-    foto,
-    tipo_membresia,
-    sesiones_restantes,
-    dias_restantes,
-    hora,
-  } = data;
-
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = ReactDOM.createRoot(container);
@@ -76,14 +72,14 @@ function showGymNotification(data: any) {
 
   root.render(
     <GymNotification
-      nombre={nombre}
-      mensaje={mensaje}
-      foto={foto}
-      hora={hora}
-      permitido={permitido}
-      tipoMembresia={tipo_membresia}
-      sesionesRestantes={sesiones_restantes}
-      diasRestantes={dias_restantes}
+      nombre={data.nombre}
+      mensaje={data.mensaje}
+      foto={data.foto}
+      hora={data.hora}
+      permitido={data.permitido}
+      tipoMembresia={data.tipoMembresia}
+      sesionesRestantes={data.sesionesRestantes}
+      diasRestantes={data.diasRestantes}
       onClose={remove}
     />
   );

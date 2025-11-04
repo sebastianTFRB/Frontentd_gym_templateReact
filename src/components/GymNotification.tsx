@@ -26,74 +26,97 @@ export function GymNotification({
   diasRestantes,
   onClose,
 }: Props) {
-  // 🔹 Cierre automático a los 6 segundos
+  // 🕒 Cierre automático
   useEffect(() => {
-    const timer = setTimeout(() => onClose?.(), 6000);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => onClose?.(), 6000);
+    return () => clearTimeout(t);
   }, [onClose]);
 
-  // 🔊 VOZ dinámica según estado del cliente
+  // 🔊 Voz en español colombiano / latino
   useEffect(() => {
     const synth = window.speechSynthesis;
     if (!synth) return;
 
-    let texto = "";
+    const texto = (() => {
+      if (!permitido) return `Acceso denegado, ${nombre}. ${mensaje}`;
 
-    if (!permitido) {
-      // ❌ ACCESO DENEGADO
-      texto = `${nombre}. ${mensaje}`;
-    } else {
-      // ✅ ACCESO PERMITIDO
-      const partes: string[] = [`Bienvenido, ${nombre}.`];
+      const partes = [`Bienvenido, ${nombre}.`];
 
-      // 🔸 Última sesión
-      if (sesionesRestantes === 1) {
-        partes.push("Esta es tu última sesión.");
-      }
-      // 🔸 Pocas sesiones
-      else if (sesionesRestantes !== null && sesionesRestantes <= 5) {
+      if (sesionesRestantes === 1) partes.push("Esta es tu última sesión.");
+      else if (sesionesRestantes && sesionesRestantes <= 5)
         partes.push(`Te quedan ${sesionesRestantes} sesiones.`);
+
+      if (diasRestantes && diasRestantes <= 5) {
+        const fecha = new Date();
+        fecha.setDate(fecha.getDate() + diasRestantes);
+        partes.push(
+          `Tu membresía vence el ${fecha.toLocaleDateString("es-CO", {
+            day: "numeric",
+            month: "long",
+          })}.`
+        );
       }
 
-      // 🔸 Membresía próxima a vencer
-      if (diasRestantes !== null && diasRestantes <= 5) {
-        const hoy = new Date();
-        const fechaVencimiento = new Date();
-        fechaVencimiento.setDate(hoy.getDate() + diasRestantes);
-        const fechaFormateada = fechaVencimiento.toLocaleDateString("es-CO", {
-          day: "numeric",
-          month: "long",
-        });
-        partes.push(`Tu membresía vence el ${fechaFormateada}.`);
-      }
-
-      // 🔸 Si no hay advertencias
       if (partes.length === 1) partes.push("Acceso permitido.");
+      return partes.join(" ");
+    })();
 
-      texto = partes.join(" ");
-    }
+    const reproducir = () => {
+      const voces = synth.getVoices();
+      if (!voces.length) return setTimeout(reproducir, 200);
 
-    const utter = new SpeechSynthesisUtterance(texto);
-    utter.lang = "es-CO";
-    utter.rate = permitido ? 1.05 : 0.95; // un poco más pausado si es denegado
-    utter.pitch = permitido ? 1.1 : 0.9; // tono más cálido si es acceso permitido
-    utter.volume = 1;
+      const utter = new SpeechSynthesisUtterance(texto);
+      utter.lang = "es-CO";
 
-    synth.cancel();
-    synth.speak(utter);
-  }, [nombre, permitido, mensaje, sesionesRestantes, diasRestantes]);
+      // 🎤 Prioridad de voces: Google Latinoamericana → Microsoft Helena / Sabina → cualquier “es-CO”
+      const vozPreferida =
+        voces.find((v) =>
+          /(es\-co|latino|mexico|colombia|google español latinoamericano)/i.test(
+            v.name
+          )
+        ) ||
+        voces.find((v) =>
+          /(helena|sabina|sofia|carla|lucia)/i.test(v.name)
+        ) ||
+        voces.find((v) => v.lang === "es-CO") ||
+        voces.find((v) => v.lang.startsWith("es"));
 
-  // 🔹 Determinar color según estado
+      utter.voice = vozPreferida || null;
+
+      // 🔉 Ajustes según tipo
+      if (!permitido) {
+        utter.rate = 0.9;
+        utter.pitch = 0.9;
+      } else if (
+        (diasRestantes && diasRestantes <= 5) ||
+        (sesionesRestantes && sesionesRestantes <= 5)
+      ) {
+        utter.rate = 1.0;
+        utter.pitch = 1.0;
+      } else {
+        utter.rate = 1.05;
+        utter.pitch = 1.1;
+      }
+
+      synth.cancel();
+      synth.speak(utter);
+    };
+
+    reproducir();
+  }, [nombre, mensaje, permitido, sesionesRestantes, diasRestantes]);
+
+  // 🎨 Colores e íconos
+  const advertencia =
+    (diasRestantes != null && diasRestantes <= 5) ||
+    (sesionesRestantes != null && sesionesRestantes <= 5);
+
   let bgColor = "from-green-500/90 to-green-700/90";
   let Icon = CheckCircle2;
 
   if (!permitido) {
     bgColor = "from-red-500/90 to-red-700/90";
     Icon = XCircle;
-  } else if (
-    (diasRestantes !== null && diasRestantes <= 5) ||
-    (sesionesRestantes !== null && sesionesRestantes <= 5)
-  ) {
+  } else if (advertencia) {
     bgColor = "from-amber-400/90 to-amber-600/90";
     Icon = AlertTriangle;
   }
