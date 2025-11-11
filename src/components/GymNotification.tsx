@@ -15,6 +15,9 @@ interface Props {
   onClose?: () => void;
 }
 
+type SavedVolume = { el: HTMLMediaElement; volume: number; muted: boolean };
+type YtFrame = { iframe: HTMLIFrameElement; wasMuted?: boolean; prevVolume?: number };
+
 export function GymNotification({
   nombre,
   mensaje,
@@ -32,15 +35,63 @@ export function GymNotification({
     return () => clearTimeout(t);
   }, [onClose]);
 
-  // 🔊 Voz en español colombiano / latino
+  /* =================== 🎚️ DUCKING (baja otras fuentes) =================== */
+  const saved: SavedVolume[] = [];
+  const ytFrames: YtFrame[] = [];
+  const DUCK_VOLUME = 0.05; // volumen de otras fuentes durante la voz
+
+  const duckAllMedia = () => {
+    document.querySelectorAll<HTMLMediaElement>("audio, video").forEach((el) => {
+      saved.push({ el, volume: el.volume, muted: el.muted });
+      if (!el.muted && el.volume > DUCK_VOLUME) el.volume = DUCK_VOLUME;
+    });
+
+    document.querySelectorAll<HTMLIFrameElement>("iframe[src*='youtube.com/embed']").forEach((iframe) => {
+      try {
+        const src = iframe.getAttribute("src") || "";
+        if (!src.includes("enablejsapi=1")) return;
+        ytFrames.push({ iframe });
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({ event: "command", func: "setVolume", args: [DUCK_VOLUME * 100] }),
+          "*"
+        );
+      } catch {}
+    });
+  };
+
+  const restoreAllMedia = () => {
+    saved.forEach(({ el, volume, muted }) => {
+      try {
+        el.volume = volume;
+        el.muted = muted;
+      } catch {}
+    });
+    saved.length = 0;
+
+    ytFrames.forEach(({ iframe }) => {
+      try {
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({ event: "command", func: "setVolume", args: [100] }),
+          "*"
+        );
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({ event: "command", func: "unMute" }),
+          "*"
+        );
+      } catch {}
+    });
+    ytFrames.length = 0;
+  };
+
+  /* =================== 🔊 REPRODUCCIÓN POTENCIADA =================== */
   useEffect(() => {
     const synth = window.speechSynthesis;
     if (!synth) return;
 
     const texto = (() => {
-      if (!permitido) return `Acceso denegado, ${nombre}. ${mensaje}`;
+      if (!permitido) return `${mensaje}`;
 
-      const partes = [`Bienvenido, ${nombre}.`];
+      const partes = [`Bienvenido ${nombre || ""}, a Golden’s Gym.`];
 
       if (sesionesRestantes === 1) partes.push("Esta es tu última sesión.");
       else if (sesionesRestantes && sesionesRestantes <= 5)
@@ -68,44 +119,61 @@ export function GymNotification({
       const utter = new SpeechSynthesisUtterance(texto);
       utter.lang = "es-CO";
 
-      // 🎤 Prioridad de voces: Google Latinoamericana → Microsoft Helena / Sabina → cualquier “es-CO”
+      // 🎙️ Voz potente y clara
       const vozPreferida =
         voces.find((v) =>
-          /(es\-co|latino|mexico|colombia|google español latinoamericano)/i.test(
-            v.name
-          )
+          /(latino|colombia|mexico|es\-co|google español latinoamericano)/i.test(v.name)
         ) ||
-        voces.find((v) =>
-          /(helena|sabina|sofia|carla|lucia)/i.test(v.name)
-        ) ||
+        voces.find((v) => /(helena|sabina|sofia|carla|lucia|monica)/i.test(v.name)) ||
         voces.find((v) => v.lang === "es-CO") ||
         voces.find((v) => v.lang.startsWith("es"));
-
       utter.voice = vozPreferida || null;
 
-      // 🔉 Ajustes según tipo
-      if (!permitido) {
-        utter.rate = 0.9;
-        utter.pitch = 0.9;
-      } else if (
-        (diasRestantes && diasRestantes <= 5) ||
-        (sesionesRestantes && sesionesRestantes <= 5)
-      ) {
-        utter.rate = 1.0;
-        utter.pitch = 1.0;
-      } else {
-        utter.rate = 1.05;
-        utter.pitch = 1.1;
+      // 🔊 Configuración para máxima potencia
+      utter.volume = 1.0; // máxima potencia
+      utter.rate = 0.95; // velocidad natural más grave
+      utter.pitch = 1.05; // tono equilibrado
+
+      // 🔉 Ducking durante la voz
+      utter.onstart = () => {
+        duckAllMedia();
+        try {
+          new BroadcastChannel("gym-tts-duck").postMessage("DUCK");
+        } catch {}
+      };
+
+      const restore = () => {
+        restoreAllMedia();
+        try {
+          new BroadcastChannel("gym-tts-duck").postMessage("RESTORE");
+        } catch {}
+      };
+
+      utter.onend = restore;
+      utter.onerror = restore;
+
+      // 🎧 Refuerzo por Web Audio API
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const gain = ctx.createGain();
+        gain.gain.value = 2.0; // duplicar ganancia
+        const src = ctx.createMediaStreamSource(
+          (synth as any).destination?.stream || new MediaStream()
+        );
+        src.connect(gain).connect(ctx.destination);
+      } catch (err) {
+        console.warn("No se pudo aplicar refuerzo de volumen:", err);
       }
 
-      synth.cancel();
+      synth.cancel(); // cancelar cualquier cola
       synth.speak(utter);
     };
 
     reproducir();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nombre, mensaje, permitido, sesionesRestantes, diasRestantes]);
 
-  // 🎨 Colores e íconos
+  /* =================== 🎨 UI =================== */
   const advertencia =
     (diasRestantes != null && diasRestantes <= 5) ||
     (sesionesRestantes != null && sesionesRestantes <= 5);
@@ -130,19 +198,13 @@ export function GymNotification({
         transition={{ duration: 0.4 }}
         className="fixed bottom-5 right-5 z-[9999]"
       >
-        <Card
-          className={`w-96 shadow-2xl border-0 text-white bg-gradient-to-br ${bgColor}`}
-        >
+        <Card className={`w-96 shadow-2xl border-0 text-white bg-gradient-to-br ${bgColor}`}>
           <div className="flex items-center gap-4">
             {/* FOTO */}
             <div className="relative">
               {foto ? (
                 <img
-                  src={
-                    foto.startsWith("http")
-                      ? foto
-                      : `${window.location.origin}/${foto}`
-                  }
+                  src={foto.startsWith("http") ? foto : `${window.location.origin}/${foto}`}
                   alt="Foto del cliente"
                   className="w-16 h-16 rounded-xl object-cover border-2 border-white/50 shadow-lg"
                 />
@@ -171,13 +233,7 @@ export function GymNotification({
                   {sesionesRestantes != null && (
                     <p>
                       <strong>Sesiones restantes:</strong>{" "}
-                      <span
-                        className={
-                          sesionesRestantes <= 5
-                            ? "font-bold text-yellow-200"
-                            : ""
-                        }
-                      >
+                      <span className={sesionesRestantes <= 5 ? "font-bold text-yellow-200" : ""}>
                         {sesionesRestantes}
                       </span>
                     </p>
@@ -185,11 +241,7 @@ export function GymNotification({
                   {diasRestantes != null && (
                     <p>
                       <strong>Días para vencer:</strong>{" "}
-                      <span
-                        className={
-                          diasRestantes <= 5 ? "font-bold text-yellow-200" : ""
-                        }
-                      >
+                      <span className={diasRestantes <= 5 ? "font-bold text-yellow-200" : ""}>
                         {diasRestantes}
                       </span>
                     </p>
