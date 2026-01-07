@@ -58,10 +58,10 @@ const AddClient: React.FC = () => {
       });
 
       const res = await createCliente(dataToSend); // Asegúrate que createCliente acepte Record<string, any>
-      
+
       const clienteId = res.data.id;
       navigate(`/HuellaController/${clienteId}`);
-      
+
     } catch (err) {
       console.error("Error creando cliente:", err);
       alert("Error al crear cliente");
@@ -111,7 +111,7 @@ const AddClient: React.FC = () => {
             <TextInput
               id="correo"
               name="correo"
-              type="email"
+              type="text"
               value={form.correo}
               onChange={handleChange}
             />
@@ -157,13 +157,13 @@ const AddClient: React.FC = () => {
               onChange={handleChange}
             >
               <option value="">Seleccione...</option>
-                {tiposDescuento.map((d) => (
+              {tiposDescuento.map((d) => (
                 <option key={d.id} value={d.id}>
-                    {d.nombre_descuento}
+                  {d.nombre_descuento}
                 </option>
-                ))}
+              ))}
 
-            
+
             </Select>
           </div>
         </div>

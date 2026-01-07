@@ -1,7 +1,7 @@
 // src/views/clientes/FormClientEdit.tsx
 import { Label, TextInput, Select, Button } from "flowbite-react";
 import React, { useEffect, useState } from "react";
-import { Cliente, getCliente, updateCliente } from "../../api/clientes"; 
+import { Cliente, getCliente, updateCliente } from "../../api/clientes";
 import { useNavigate, useParams } from "react-router-dom";
 
 export default function FormClientEdit() {
@@ -108,7 +108,7 @@ export default function FormClientEdit() {
             <Label htmlFor="correo" value="Correo" className="mb-2 block" />
             <TextInput
               id="correo"
-              type="email"
+              type="text"
               value={form.correo}
               onChange={(e) => setForm({ ...form, correo: e.target.value })}
             />
@@ -166,7 +166,7 @@ export default function FormClientEdit() {
           </div>
         </div>
 
-       
+
         {/* Botones */}
         <div className="col-span-12 flex gap-3">
           <Button color="primary" type="submit" isProcessing={loading}>

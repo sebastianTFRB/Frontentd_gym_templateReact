@@ -55,7 +55,7 @@ export function GymNotification({
           JSON.stringify({ event: "command", func: "setVolume", args: [DUCK_VOLUME * 100] }),
           "*"
         );
-      } catch {}
+      } catch { }
     });
   };
 
@@ -64,7 +64,7 @@ export function GymNotification({
       try {
         el.volume = volume;
         el.muted = muted;
-      } catch {}
+      } catch { }
     });
     saved.length = 0;
 
@@ -78,7 +78,7 @@ export function GymNotification({
           JSON.stringify({ event: "command", func: "unMute" }),
           "*"
         );
-      } catch {}
+      } catch { }
     });
     ytFrames.length = 0;
   };
@@ -91,7 +91,7 @@ export function GymNotification({
     const texto = (() => {
       if (!permitido) return `${mensaje}`;
 
-      const partes = [`Bienvenido ${nombre || ""}, a Golden’s Gym.`];
+      const partes = [`Bienvenido a Golden’s Gym.`];
 
       if (sesionesRestantes === 1) partes.push("Esta es tu última sesión.");
       else if (sesionesRestantes && sesionesRestantes <= 5)
@@ -139,14 +139,14 @@ export function GymNotification({
         duckAllMedia();
         try {
           new BroadcastChannel("gym-tts-duck").postMessage("DUCK");
-        } catch {}
+        } catch { }
       };
 
       const restore = () => {
         restoreAllMedia();
         try {
           new BroadcastChannel("gym-tts-duck").postMessage("RESTORE");
-        } catch {}
+        } catch { }
       };
 
       utter.onend = restore;

@@ -1,7 +1,6 @@
 // /src/views/dashboards/ReportesDashboard.tsx
 import React, { lazy } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../api/apiConfig";
+import { api } from "../../api/apiConfig";
 
 // ✅ (opcional, pero recomendado) TanStack Query
 import { useQuery } from "@tanstack/react-query";
@@ -11,9 +10,6 @@ const ReactApexChart = lazy(() => import("react-apexcharts"));
 // -----------------------------
 // Config API (autocontenida)
 // -----------------------------
-
-
-const api = axios.create({ baseURL: API_BASE_URL });
 
 // -----------------------------
 // Tipos y helpers dentro de la página

@@ -1,7 +1,7 @@
 // src/pages/Clientes/EditarClienteConMembresia.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Button, Spinner } from "flowbite-react";
+import { Spinner } from "flowbite-react";
 import { Icon } from "@iconify/react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -12,7 +12,6 @@ import { getMembresias } from "../../../api/membresias";
 import {
   updateClienteConMembresia,
   ActualizarClienteYVentaRequest,
-  EstadoMembresia,
 } from "../../../api/clientes_membresia";
 import { API_BASE_URL } from "../../../api/apiConfig";
 
@@ -89,7 +88,22 @@ async function uploadBase64ToBackend(
   fd.append("documento", documento);
   fd.append("file", blob, `${documento}.${mime === "image/png" ? "png" : "jpg"}`);
 
-  const res = await fetch(`${API_BASE}/uploads/files/upload-foto`, { method: "POST", body: fd });
+  let token = "";
+  try {
+    const item = localStorage.getItem("auth-storage");
+    if (item) {
+      const parsed = JSON.parse(item);
+      if (parsed.state?.token) token = parsed.state.token;
+    }
+  } catch (e) { }
+
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const res = await fetch(`${API_BASE}/uploads/files/upload-foto`, {
+    method: "POST",
+    headers,
+    body: fd,
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Falló el upload (${res.status}): ${text || res.statusText}`);
@@ -174,6 +188,7 @@ export default function EditarClienteConMembresia() {
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
+  const [observaciones, setObservaciones] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState<string>("");
 
   /* Foto */
@@ -305,7 +320,7 @@ export default function EditarClienteConMembresia() {
   const [touchedFin, setTouchedFin] = useState(false);
   const [precioFinal, setPrecioFinal] = useState<string>("");
   const [sesionesRestantes, setSesionesRestantes] = useState<string>("");
-  const estado: EstadoMembresia = "activa";
+
 
   // Flags
   const [userChangedMembresia, setUserChangedMembresia] = useState(false);
@@ -330,6 +345,7 @@ export default function EditarClienteConMembresia() {
       setCorreo(c.correo ?? "");
       setTelefono(c.telefono ?? "");
       setDireccion(c.direccion ?? "");
+      setObservaciones((c as any).observaciones ?? "");
       if (c.fecha_nacimiento) {
         const d = parseDateOnlyLocal(c.fecha_nacimiento);
         if (d) setFechaNacimiento(fmtDateInputLocal(d));
@@ -417,11 +433,7 @@ export default function EditarClienteConMembresia() {
     return Number.isNaN(n) || n < 0;
   }, [precioFinal]);
 
-  /* ===================== Inputs estilo template ===================== */
-  const baseInput =
-    "block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900 " +
-    "focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white " +
-    "dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg";
+
 
   /* ===================== Submit ===================== */
   const onSubmit = async (e: React.FormEvent) => {
@@ -458,6 +470,7 @@ export default function EditarClienteConMembresia() {
         telefono: telefono.trim() || undefined,
         direccion: direccion.trim() || undefined,
         huella_base64: "",
+        observaciones: observaciones.trim() || undefined,
       };
 
       if (borrarFoto && !fotografiaRuta) clientePayload.fotografia = "";
@@ -512,383 +525,351 @@ export default function EditarClienteConMembresia() {
   );
 
   return (
-    <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-      {/* Header */}
-      <header className="flex items-center justify-between mb-4">
-        <h5 className="card-title">{titulo}</h5>
-        <Link
-          to="/clientes/membresias"
-          role="button"
-          className="flex items-center justify-center px-4 py-3 gap-3 text-[15px]
-                     leading-[normal] font-medium text-black
-                     bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                     rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
-                     focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-        >
-          <Icon icon="solar:alt-arrow-left-outline" width="18" height="18" />
-          <span>Volver</span>
-        </Link>
-      </header>
+    <div className="p-6 transition-all duration-300 ease-in-out">
+      {/* Decorative Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[10%] left-[20%] w-96 h-96 bg-primary/5 rounded-full blur-[100px]"></div>
+        <div className="absolute bottom-[10%] right-[10%] w-80 h-80 bg-yellow-400/5 rounded-full blur-[80px]"></div>
+      </div>
 
-      {/* Mensajes */}
-      {error && (
-        <div className="mb-3 text-sm rounded-xl border border-red-200 bg-red-50 text-red-700 px-3 py-2">{error}</div>
-      )}
-      {info && (
-        <div className="mb-3 text-sm rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-2">{info}</div>
-      )}
+      <div className="max-w-7xl mx-auto relative z-10">
 
-      {/* Contenido */}
-      {loading ? (
-        <div className="flex items-center gap-2">
-          <Spinner /> <span>Cargando…</span>
-        </div>
-      ) : (
-        <form onSubmit={onSubmit} className="space-y-8">
-          {/* Datos del cliente */}
-          <section>
-            <h6 className="font-semibold mb-3">Datos del cliente</h6>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="nombre" className="sr-only">Nombre</label>
-                  <input id="nombre" type="text" className={baseInput} placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-                </div>
-              </div>
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="apellido" className="sr-only">Apellido</label>
-                  <input id="apellido" type="text" className={baseInput} placeholder="Apellido" value={apellido} onChange={(e) => setApellido(e.target.value)} required />
-                </div>
-              </div>
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="documento" className="sr-only">Documento</label>
-                  <input id="documento" type="text" className={baseInput} placeholder="Documento" value={documento} onChange={(e) => setDocumento(e.target.value)} required />
-                </div>
-              </div>
-
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="fecha_nacimiento" className="sr-only">Fecha de nacimiento</label>
-                  <input 
-                    id="fecha_nacimiento" 
-                    type="date" 
-                    className={baseInput} 
-                    value={fechaNacimiento} 
-                    onChange={(e) => setFechaNacimiento(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="correo" className="sr-only">Correo</label>
-                  <input id="correo" type="email" className={baseInput} placeholder="Correo" value={correo} onChange={(e) => setCorreo(e.target.value)} />
-                </div>
-              </div>
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="telefono" className="sr-only">Teléfono</label>
-                  <input id="telefono" type="text" className={baseInput} placeholder="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-                </div>
-              </div>
-              <div className="flex form-control form-rounded-xl md:col-span-3">
-                <div className="relative w-full">
-                  <label htmlFor="direccion" className="sr-only">Dirección</label>
-                  <input id="direccion" type="text" className={baseInput} placeholder="Dirección" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Fotografía */}
-          <section>
-            <h6 className="font-semibold mb-3">Fotografía</h6>
-
-            <div className="flex items-start gap-6 mb-4">
-              <div className="flex flex-col items-start">
-                <span className="text-xs mb-1 opacity-70">Actual</span>
-                {fotoRutaActual ? (
-                  <img
-                    src={resolveFotoSrc(fotoRutaActual)!}
-                    alt="foto actual"
-                    className="h-32 w-32 object-cover rounded-xl border"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src =
-                        "data:image/svg+xml;utf8," +
-                        encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><rect width='100%' height='100%' rx='16' fill='#2d333b'/></svg>`);
-                    }}
-                  />
-                ) : (
-                  <div className="h-32 w-32 rounded-xl border bg-gray-100 dark:bg-gray-800" />
-                )}
-                <label className="mt-2 inline-flex items-center gap-2 text-sm cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300 text-primary focus:ring-cyan-500"
-                    checked={borrarFoto}
-                    onChange={(e) => { setBorrarFoto(e.target.checked); if (e.target.checked) clearNewPhoto(); }}
-                  />
-                  Borrar foto actual
-                </label>
-              </div>
-
-              {fotoPreviewUrl && (
-                <div className="flex flex-col items-start">
-                  <span className="text-xs mb-1 opacity-70">Nueva</span>
-                  <img src={fotoPreviewUrl} alt="nueva" className="h-32 w-32 object-cover rounded-xl border" />
-                </div>
-              )}
-            </div>
-
-            <div
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              className={`border-2 border-dashed rounded-xl p-4 transition ${dragActive ? "border-primary bg-lightprimary/30" : "border-gray-300 dark:border-gray-600"}`}
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                {!camOn ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={startCamera}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                    >
-                      <Icon icon="solar:camera-outline" width="18" height="18" />
-                      Abrir cámara
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={onPickFile}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                    >
-                      <Icon icon="solar:upload-linear" width="18" height="18" />
-                      Subir archivo
-                    </button>
-
-                    {fotoPreviewUrl && (
-                      <button
-                        type="button"
-                        onClick={clearNewPhoto}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                      >
-                        <Icon icon="solar:close-circle-outline" width="18" height="18" />
-                        Quitar nueva foto
-                      </button>
-                    )}
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png"
-                      className="hidden"
-                      onChange={onFileChange}
-                    />
-
-                    <span className="text-xs opacity-70">
-                      Arrastra una imagen aquí o usa los botones. (JPG o PNG)
-                    </span>
-                  </>
-                ) : (
-                  <div className="w-full">
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full max-w-md rounded-xl border aspect-video bg-black" />
-                    <div className="flex items-center gap-3 mt-3">
-                      <button
-                        type="button"
-                        onClick={takePhoto}
-                        disabled={!videoReady}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white shadow-btnshdw hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        <Icon icon="solar:camera-add-outline" width="18" height="18" />
-                        Tomar foto
-                      </button>
-                      <button
-                        type="button"
-                        onClick={stopCamera}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                      >
-                        <Icon icon="solar:close-circle-outline" width="18" height="18" />
-                        Cancelar
-                      </button>
-                    </div>
-                    {camError && <span className="text-red-600 text-sm mt-2 inline-block">{camError}</span>}
-                    <canvas ref={canvasRef} className="hidden" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <p className="text-xs opacity-70 mt-2">La foto se guardará al presionar <strong>Guardar</strong>.</p>
-          </section>
-
-          {/* Membresía / Venta */}
-          <section>
-            <h6 className="font-semibold mb-3">Membresía</h6>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="id_membresia" className="sr-only">Membresía</label>
-                  <select
-                    id="id_membresia"
-                    className={baseInput}
-                    value={idMembresia}
-                    onChange={(e) => {
-                      const newId = e.target.value ? Number(e.target.value) : "";
-                      setIdMembresia(newId);
-                      setUserChangedMembresia(true);
-
-                      // Reiniciar sesiones por defecto (si deseas)
-                      const defSessions = defaultSessionsFor(membresias, newId);
-                      if (defSessions != null && Number.isFinite(defSessions)) {
-                        setSesionesRestantes(String(defSessions));
-                      }
-
-                      // Ajustar fin según días de duración; si no hay, +1 mes
-                      setTouchedFin(false); // rehabilita auto-cálculo
-                      const nuevoFin = calcFechaFinPorMembresia(fechaInicio, membresias, newId);
-                      setFechaFin(nuevoFin);
-                    }}
-                    required
-                  >
-                    <option value="">Selecciona…</option>
-                    {membresias.map((m) => (
-                      <option key={m.id} value={m.id}>{m.nombre_membresia}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="fecha_inicio" className="sr-only">Fecha inicio</label>
-                  <input
-                    id="fecha_inicio"
-                    type="date"
-                    className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                    aria-invalid={dateInvalid || undefined}
-                    value={fechaInicio}
-                    onChange={(e) => {
-                      const d = parseDateOnlyLocal(e.target.value);
-                      const nuevoInicio = d ? fmtDateInputLocal(d) : e.target.value;
-                      setFechaInicio(nuevoInicio);
-
-                      // Recalcular fin según membresía actual
-                      setTouchedFin(false); // re-habilita auto-cálculo
-                      const nuevoFin = calcFechaFinPorMembresia(nuevoInicio, membresias, idMembresia);
-                      setFechaFin(nuevoFin);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="fecha_fin" className="sr-only">Fecha fin</label>
-                  <input
-                    id="fecha_fin"
-                    type="date"
-                    className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                    aria-invalid={dateInvalid || undefined}
-                    value={fechaFin}
-                    onChange={(e) => {
-                      const d = parseDateOnlyLocal(e.target.value);
-                      setFechaFin(d ? fmtDateInputLocal(d) : e.target.value);
-                      setTouchedFin(true); // usuario tomó control manual
-                    }}
-                  />
-                  {dateInvalid && (
-                    <p className="mt-1 text-xs text-red-600">
-                      La fecha de fin debe ser el mismo día o posterior a la fecha de inicio.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="precio_final" className="sr-only">Precio</label>
-                  <input
-                    id="precio_final"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    className={`${baseInput} ${precioInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                    aria-invalid={precioInvalid || undefined}
-                    value={precioFinal}
-                    onChange={(e) => setPrecioFinal(e.target.value)}
-                  />
-                  {precioInvalid && <p className="mt-1 text-xs text-red-600">El precio debe ser mayor o igual a 0.</p>}
-                </div>
-              </div>
-
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="sesiones" className="sr-only">Sesiones restantes</label>
-                  <input
-                    id="sesiones"
-                    type="number"
-                    min={0}
-                    step={1}
-                    placeholder="0"
-                    className={baseInput}
-                    value={sesionesRestantes}
-                    onChange={(e) => setSesionesRestantes(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="estado" className="sr-only">Estado</label>
-                  <input id="estado" type="text" className={baseInput} value="Activo" readOnly />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Acciones */}
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={saving || dateInvalid || precioInvalid}
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-black
-                         bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                         shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                         hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed
-                         focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-            >
-              {saving ? (
-                <>
-                  <Spinner size="sm" /> Guardando…
-                </>
-              ) : (
-                <>
-                  <Icon icon="solar:floppy-disk-outline" width="18" height="18" /> Guardar
-                </>
-              )}
-            </button>
-
-            <Link
-              to="/clientes/membresias"
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-            >
-              <Icon icon="solar:close-circle-outline" width="18" height="18" />
-              Cancelar
-            </Link>
-            <Button
-              color="yellow"
-              type="button"
-              onClick={() => navigate(`/HuellaController/${clienteId}`)}
-            >
-              Editar Huella
-            </Button>
+        {/* Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h5 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <Icon icon="solar:user-id-bold-duotone" className="text-primary" />
+              {titulo}
+            </h5>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Actualiza la información personal, fotografía y detalles de la membresía.
+            </p>
           </div>
-        </form>
-      )}
+          <Link
+            to="/clientes/membresias"
+            className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <Icon icon="solar:arrow-left-linear" width={18} />
+            <span>Volver al listado</span>
+          </Link>
+        </div>
+
+        {error && (
+          <div className="mb-4 text-sm rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 flex items-center gap-2">
+            <Icon icon="solar:danger-circle-bold" className="text-lg" />
+            {error}
+          </div>
+        )}
+        {info && (
+          <div className="mb-4 text-sm rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 flex items-center gap-2">
+            <Icon icon="solar:check-circle-bold" className="text-lg" />
+            {info}
+          </div>
+        )}
+
+        {(() => {
+          const inputClass = "w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all p-2.5 text-sm outline-none";
+          const labelClass = "block mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400";
+
+          return (
+            <>
+              {loading ? (
+                <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 p-12 flex flex-col items-center justify-center min-h-[400px]">
+                  <Spinner size="xl" color="warning" />
+                  <span className="mt-4 text-gray-500 animate-pulse">Cargando datos del cliente...</span>
+                </div>
+              ) : (
+                <form onSubmit={onSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                  {/* Columna Izquierda: Datos Personales + Foto */}
+                  <div className="lg:col-span-7 space-y-6">
+
+                    {/* Tarjeta: Información Personal */}
+                    <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30 flex items-center gap-2">
+                        <Icon icon="solar:user-id-linear" className="text-primary" width={20} />
+                        <h6 className="font-semibold text-gray-800 dark:text-white">Información Personal</h6>
+                      </div>
+
+                      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label htmlFor="nombre" className={labelClass}>Nombre *</label>
+                          <input id="nombre" type="text" className={inputClass} placeholder="Ej: Juan" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+                        </div>
+                        <div>
+                          <label htmlFor="apellido" className={labelClass}>Apellido *</label>
+                          <input id="apellido" type="text" className={inputClass} placeholder="Ej: Pérez" value={apellido} onChange={(e) => setApellido(e.target.value)} required />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="documento" className={labelClass}>Documento de Identidad *</label>
+                          <input id="documento" type="text" className={inputClass} placeholder="Ej: 1234567890" value={documento} onChange={(e) => setDocumento(e.target.value)} required />
+                        </div>
+                        <div>
+                          <label htmlFor="fecha_nacimiento" className={labelClass}>Fecha de Nacimiento</label>
+                          <input id="fecha_nacimiento" type="date" className={inputClass} value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
+                        </div>
+                        <div>
+                          <label htmlFor="telefono" className={labelClass}>Teléfono</label>
+                          <input id="telefono" type="text" className={inputClass} placeholder="Ej: 300 123 4567" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="correo" className={labelClass}>Correo Electrónico</label>
+                          <input id="correo" type="email" className={inputClass} placeholder="cliente@email.com" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="direccion" className={labelClass}>Dirección</label>
+                          <input id="direccion" type="text" className={inputClass} placeholder="Dirección de residencia" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="observaciones" className={labelClass}>Observaciones</label>
+                          <textarea id="observaciones" className={inputClass} placeholder="Notas adicionales..." rows={3} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tarjeta: Fotografía */}
+                    <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30 flex items-center gap-2">
+                        <Icon icon="solar:camera-linear" className="text-primary" width={20} />
+                        <h6 className="font-semibold text-gray-800 dark:text-white">Fotografía</h6>
+                      </div>
+                      <div className="p-6">
+
+                        {/* Visualización de Foto Actual/Preview */}
+                        <div className="flex flex-col sm:flex-row gap-6 mb-6">
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Foto Actual</span>
+                            {fotoRutaActual ? (
+                              <div className="relative group">
+                                <img
+                                  src={resolveFotoSrc(fotoRutaActual)!}
+                                  alt="Foto actual"
+                                  className={`w-32 h-32 object-cover rounded-2xl shadow-md border-2 border-gray-200 dark:border-gray-600 ${borrarFoto ? 'opacity-50 grayscale' : ''}`}
+                                />
+                                {borrarFoto && (
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="bg-red-500/80 text-white text-xs font-bold px-2 py-1 rounded">ELIMINAR</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="w-32 h-32 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+                                <Icon icon="solar:user-circle-linear" width={40} className="text-gray-400" />
+                              </div>
+                            )}
+                            {fotoRutaActual && (
+                              <label className="mt-3 inline-flex items-center gap-2 cursor-pointer group">
+                                <div className="relative flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    className="peer sr-only"
+                                    checked={borrarFoto}
+                                    onChange={(e) => { setBorrarFoto(e.target.checked); if (e.target.checked) clearNewPhoto(); }}
+                                  />
+                                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-red-500"></div>
+                                </div>
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 group-hover:text-red-500 transition-colors">Eliminar foto</span>
+                              </label>
+                            )}
+                          </div>
+
+                          {fotoPreviewUrl && (
+                            <div className="flex flex-col items-center animate-fade-in">
+                              <span className="text-xs font-bold uppercase tracking-wider text-green-500 mb-2">Nueva Foto</span>
+                              <div className="relative">
+                                <img src={fotoPreviewUrl} alt="Nueva foto" className="w-32 h-32 object-cover rounded-2xl shadow-lg ring-4 ring-green-500/20" />
+                                <button
+                                  type="button"
+                                  onClick={clearNewPhoto}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                                  title="Descartar nueva foto"
+                                >
+                                  <Icon icon="solar:close-circle-bold" width={16} />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div
+                          onDragOver={onDragOver}
+                          onDragLeave={onDragLeave}
+                          onDrop={onDrop}
+                          className={`border-2 border-dashed rounded-xl p-6 transition-all duration-200 ${dragActive ? "border-primary bg-primary/5" : "border-gray-200 dark:border-gray-600 hover:border-primary/50"}`}
+                        >
+                          {!camOn ? (
+                            <div className="flex flex-col items-center">
+                              <div className="flex flex-wrap justify-center gap-3 mb-4">
+                                <button
+                                  type="button"
+                                  onClick={startCamera}
+                                  className="px-5 py-2.5 bg-gray-900 dark:bg-gray-700 text-white font-medium rounded-lg shadow hover:bg-black dark:hover:bg-gray-600 transition-all flex items-center gap-2"
+                                >
+                                  <Icon icon="solar:camera-minimalistic-bold" width={18} /> Cámara
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={onPickFile}
+                                  className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-all flex items-center gap-2"
+                                >
+                                  <Icon icon="solar:upload-minimalistic-linear" width={18} /> Subir archivo
+                                </button>
+                                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={onFileChange} />
+                              </div>
+                              <p className="text-xs text-gray-500 text-center">
+                                Arrastra una imagen aquí (JPG, PNG) o usa los botones.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center animate-fade-in w-full">
+                              <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-4 ring-primary/20 max-w-sm w-full bg-black mb-4">
+                                <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-video object-cover" />
+                                <canvas ref={canvasRef} className="hidden" />
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <button type="button" onClick={takePhoto} disabled={!videoReady} className="px-5 py-2.5 bg-primary text-white font-medium rounded-lg shadow-lg hover:brightness-110 flex items-center gap-2">
+                                  <Icon icon="solar:camera-bold" width={18} /> Capturar
+                                </button>
+                                <button type="button" onClick={stopCamera} className="px-5 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 flex items-center gap-2">
+                                  Cancelar
+                                </button>
+                              </div>
+                              {camError && <span className="text-red-500 text-xs mt-2 font-medium">{camError}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columna Derecha: Membresía + Acciones */}
+                  <div className="lg:col-span-5 space-y-6">
+                    <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 border-2 border-primary/20 overflow-hidden relative">
+                      {/* Highlight Top - Purple if Edit mode */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+
+                      <div className="p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                            <Icon icon="solar:card-reciept-bold-duotone" width={22} />
+                          </div>
+                          <div>
+                            <h6 className="font-bold text-gray-800 dark:text-white text-lg">Membresía</h6>
+                            <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Editar plan actual</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-5">
+                          <div>
+                            <label htmlFor="id_membresia" className={labelClass}>Plan *</label>
+                            <select
+                              id="id_membresia"
+                              className={inputClass}
+                              value={idMembresia}
+                              onChange={(e) => {
+                                // (Lógica existente preservada)
+                                const newId = e.target.value ? Number(e.target.value) : "";
+                                setIdMembresia(newId);
+                                setUserChangedMembresia(true);
+                                const defSessions = defaultSessionsFor(membresias, newId);
+                                if (defSessions != null && Number.isFinite(defSessions)) setSesionesRestantes(String(defSessions));
+                                setTouchedFin(false);
+                                const nuevoFin = calcFechaFinPorMembresia(fechaInicio, membresias, newId);
+                                setFechaFin(nuevoFin);
+                              }}
+                              required
+                            >
+                              <option value="">-- Seleccionar --</option>
+                              {membresias.map((m) => (
+                                <option key={m.id} value={m.id}> {m.nombre_membresia} </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label htmlFor="fecha_inicio" className={labelClass}>Inicio</label>
+                              <input id="fecha_inicio" type="date" className={`${inputClass} ${dateInvalid ? 'border-red-500 text-red-600' : ''}`} value={fechaInicio} onChange={(e) => { setFechaInicio(e.target.value); setTouchedFin(false); }} />
+                            </div>
+                            <div>
+                              <label htmlFor="fecha_fin" className={labelClass}>Fin</label>
+                              <input id="fecha_fin" type="date" className={`${inputClass} ${dateInvalid ? 'border-red-500 text-red-600' : ''}`} value={fechaFin} onChange={(e) => { setFechaFin(e.target.value); setTouchedFin(true); }} />
+                            </div>
+                          </div>
+                          {dateInvalid && <p className="text-xs text-red-500 font-medium bg-red-50 p-2 rounded">⚠ La fecha de fin no puede ser anterior al inicio.</p>}
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label htmlFor="precio_final" className={labelClass}>Precio (COP)</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-gray-400 text-sm">$</span>
+                                <input id="precio_final" type="number" step="0.01" className={`${inputClass} pl-6`} placeholder="0" value={precioFinal} onChange={(e) => setPrecioFinal(e.target.value)} />
+                              </div>
+                            </div>
+                            <div>
+                              <label htmlFor="sesiones" className={labelClass}>Sesiones</label>
+                              <input id="sesiones" type="number" step="1" className={inputClass} placeholder="∞" value={sesionesRestantes} onChange={(e) => setSesionesRestantes(e.target.value)} />
+                            </div>
+                          </div>
+
+                          <div className="pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-medium text-gray-500">Estado</span>
+                              <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 uppercase">Activo</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-500">Valor</span>
+                              <span className="text-xl font-bold text-gray-900 dark:text-white">
+                                {precioFinal ? Number(precioFinal).toLocaleString('es-CO', { style: 'currency', currency: 'COP' }) : '$ 0'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botones de Acción */}
+                    <div className="space-y-4 pt-2">
+                      <button
+                        type="submit"
+                        disabled={saving || dateInvalid || precioInvalid}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-lg
+                                      bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/30
+                                      hover:translate-y-[-2px] hover:shadow-indigo-500/50 active:translate-y-[0px] transition-all
+                                      disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? (
+                          <> <Spinner size="sm" color="white" /> Guardando... </>
+                        ) : (
+                          <> <Icon icon="solar:floppy-disk-bold" width={24} /> Guardar Cambios </>
+                        )}
+                      </button>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/HuellaController/${clienteId}`)}
+                          className="px-4 py-3 rounded-xl border-2 border-yellow-400 bg-yellow-50 text-yellow-700 font-bold hover:bg-yellow-100 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Icon icon="solar:hand-stars-bold" width={20} />
+                          Editar Huella
+                        </button>
+                        <Link
+                          to="/clientes/membresias"
+                          className="px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          Cancelar
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                </form>
+              )}
+            </>
+          );
+        })()}
+      </div>
     </div>
   );
 }

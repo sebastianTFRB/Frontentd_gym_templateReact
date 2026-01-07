@@ -36,10 +36,33 @@ export default defineConfig({
     },
 
 
-    
+
     // plugins: [react(),svgr({
     //   exportAsDefault: true
     // })],
 
     plugins: [svgr(), react()],
+    build: {
+        outDir: 'dist',
+        minify: 'esbuild',
+        sourcemap: false,
+        rollupOptions: {
+            output: {
+                manualChunks: (id) => {
+                    if (id.includes('node_modules')) {
+                        if (id.includes('react') || id.includes('react-router') || id.includes('react-dom')) {
+                            return 'vendor-react';
+                        }
+                        if (id.includes('@iconify') || id.includes('flowbite')) {
+                            return 'vendor-ui';
+                        }
+                        if (id.includes('apexcharts') || id.includes('react-apexcharts')) {
+                            return 'vendor-charts';
+                        }
+                        return 'vendor';
+                    }
+                },
+            },
+        },
+    },
 });

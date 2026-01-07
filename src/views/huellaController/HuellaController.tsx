@@ -15,17 +15,18 @@ interface Cliente {
   apellido: string;
   documento: string;
   correo?: string;
+  id_huella?: number;
 }
 
 export default function HuellaController() {
   const MySwal = withReactContent(Swal);
-  
-  
+
+
 
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const deviceId = 1; 
+
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,27 +56,37 @@ export default function HuellaController() {
     if (!id) return;
     try {
       setLoading(true);
-      const response = await api.post(`/dispositivo/dispositivo/${deviceId}/comando`, {
-        comando: "update",
+      const response = await api.post("/dispositivos/pasto/turnstile-01/cmd", {
+        action: "update",
         cliente_id: Number(id),
-        id_huella: 0,
-      });
-      console.log("Respuesta:", response.data);
-      MySwal.fire({
-        icon: "success",
-        title: "¡Comando enviado!",
-        text: "El huellero está sincronizado correctamente ✅",
-        confirmButtonColor: "#3085d6",
+        id_huella: cliente?.id_huella || 0,
+        payload: {
+          timeout_ms: 3500
+        },
+        timeout: 0
       });
 
-      setShowScan(true); // activar escaneo
-      setReady(true);    // activar mensaje
+      console.log("Respuesta:", response.data);
+
+      if (response.data.ok) {
+        MySwal.fire({
+          icon: "success",
+          title: "¡Comando enviado!",
+          text: "El huellero está sincronizado correctamente ✅",
+          confirmButtonColor: "#3085d6",
+        });
+
+        setShowScan(true); // activar escaneo
+        setReady(true);    // activar mensaje
+      } else {
+        throw new Error("El dispositivo no confirmó la actualización (Timeout)");
+      }
     } catch (error) {
       console.error("Error al enviar comando:", error);
       MySwal.fire({
         icon: "error",
-        title: "¡Comando enviado!",
-        text: "Error al enviar comando",
+        title: "Error",
+        text: "Error al enviar comando al dispositivo",
         confirmButtonColor: "#d63030ff",
       });
     } finally {
@@ -113,9 +124,9 @@ export default function HuellaController() {
               {/* 🔹 Mensaje de lector listo */}
               {ready && (
                 <p className="mt-4 text-2xl font-bold text-green-600">
-                 Lector preparado para escanear
-              </p>
-              
+                  Lector preparado para escanear
+                </p>
+
 
               )}
             </div>
@@ -150,7 +161,7 @@ export default function HuellaController() {
         <Button color="primary" onClick={handleUpdateCommand} disabled={loading}>
           {loading ? "Enviando comando..." : "Sincronizar Huellero"}
         </Button>
-        
+
       </div>
     </div>
   );

@@ -253,8 +253,8 @@ export default function ResumenMembresias() {
           v.precio_final != null
             ? Number(v.precio_final)
             : (row as any).precio != null
-            ? Number((row as any).precio)
-            : 0,
+              ? Number((row as any).precio)
+              : 0,
         estado: String(v.estado || (row as any).estado || "activa"),
         sesiones_restantes: current - 1,
       };
@@ -287,273 +287,243 @@ export default function ResumenMembresias() {
   };
 
   return (
-    <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-      <header className="flex items-center justify-between gap-3 flex-wrap">
-        <h5 className="card-title">Resumen de membresías</h5>
+    <div className="p-6 transition-all duration-300 ease-in-out">
+      {/* Main Card with Glass/Neumorphism feel */}
+      <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 relative overflow-hidden">
 
-        <Link
-          to="/clientes/new-with-membresia"
-          role="button"
-          className="flex items-center justify-center px-4 py-3 gap-3 text-[15px]
-                     leading-[normal] font-medium text-black
-                     bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                     rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
-                     focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-        >
-          <Icon icon="solar:add-circle-outline" width="18" height="18" />
-          <span>Nuevo</span>
-        </Link>
-      </header>
+        {/* Decorative Background Elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none"></div>
 
-      {/* Filtros + Search */}
-      <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <button
-            className={`${pillBase} ${filter === "todas" ? pillActive : pillInactive}`}
-            onClick={() => {
-              setFilter("todas");
-              setPage(1);
-            }}
-            type="button"
+        {/* Header Section */}
+        <div className="p-6 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+          <div>
+            <h5 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <Icon icon="solar:users-group-rounded-bold-duotone" className="text-primary" />
+              Resumen de Membresías
+            </h5>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Gestiona el estado y sesiones de tus clientes activos.
+            </p>
+          </div>
+
+          <Link
+            to="/clientes/new-with-membresia"
+            className="group flex items-center justify-center gap-2 px-5 py-2.5 
+                       bg-gradient-to-r from-primary to-yellow-500 text-white font-semibold rounded-xl 
+                       shadow-lg shadow-yellow-500/30 hover:shadow-yellow-500/50 
+                       transform hover:-translate-y-0.5 transition-all duration-200"
           >
-            Todas
-          </button>
-          <button
-            className={`${pillBase} ${filter === "activas" ? pillActive : pillInactive}`}
-            onClick={() => {
-              setFilter("activas");
-              setPage(1);
-            }}
-            type="button"
-          >
-            Activas
-          </button>
-          <button
-            className={`${pillBase} ${filter === "por_vencer" ? pillActive : pillInactive}`}
-            onClick={() => {
-              setFilter("por_vencer");
-              setPage(1);
-            }}
-            type="button"
-          >
-            Por vencer ≤ 5 días
-          </button>
-          <button
-            className={`${pillBase} ${filter === "vencidas" ? pillActive : pillInactive}`}
-            onClick={() => {
-              setFilter("vencidas");
-              setPage(1);
-            }}
-            type="button"
-          >
-            Vencidas
-          </button>
+            <Icon icon="solar:add-circle-bold" width="20" height="20" className="group-hover:rotate-90 transition-transform" />
+            <span>Nueva Membresía</span>
+          </Link>
         </div>
 
-        {/* Search */}
-        <div className="w-full md:w-1/2">
-          <div className="flex form-control form-rounded-xl">
-            <div className="relative w-full">
-              <input
-                id="search"
-                type="text"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Buscar…"
-                aria-label="Buscar"
-                className="block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900
-                           focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white
-                           dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg"
-              />
+        {/* Filters & Search Bar */}
+        <div className="p-6 flex flex-col lg:flex-row items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 relative z-10">
+
+          {/* Status Filters */}
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            {[{ id: 'todas', label: 'Todas' }, { id: 'activas', label: 'Activas' }, { id: 'por_vencer', label: 'Por Vencer' }, { id: 'vencidas', label: 'Vencidas' }].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => { setFilter(f.id as any); setPage(1); }}
+                className={`
+                  px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border
+                  ${filter === f.id
+                    ? "bg-primary text-white border-primary shadow-md shadow-primary/25"
+                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"}
+                `}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Input */}
+          <div className="w-full lg:w-80 relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Icon icon="solar:magnifer-linear" className="text-gray-400 group-focus-within:text-primary transition-colors" width="20" />
             </div>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+              placeholder="Buscar cliente..."
+              className="block w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 
+                         bg-gray-50 dark:bg-gray-700 text-sm outline-none focus:ring-2 focus:ring-primary/20 
+                         focus:border-primary transition-all dark:text-white"
+            />
           </div>
         </div>
-      </div>
 
-      <div className="mt-3">
-        {err ? (
-          <p style={{ color: "crimson" }}>{err}</p>
-        ) : loading ? (
-          <div className="flex items-center gap-2">
-            <Spinner />
-            <span>Cargando…</span>
-          </div>
-        ) : !rows.length ? (
-          <p>No hay datos.</p>
-        ) : (
-          <>
-            <Table hoverable>
-              <Table.Head>
-                <Table.HeadCell className="p-6">Id</Table.HeadCell>
-                <Table.HeadCell>Foto</Table.HeadCell>
-                <Table.HeadCell>Nombre</Table.HeadCell>
-                <Table.HeadCell>Detalle</Table.HeadCell>
-                <Table.HeadCell>Estado</Table.HeadCell>
-                <Table.HeadCell>Sesiones</Table.HeadCell>
-                <Table.HeadCell />
+        {/* Table Content */}
+        <div className="relative z-10 overflow-x-auto custom-scrollbar">
+          {err ? (
+            <div className="p-10 text-center text-red-500 bg-red-50 dark:bg-red-900/10 rounded-lg m-6 border border-red-100 dark:border-red-900/30">
+              <Icon icon="solar:danger-circle-bold-duotone" className="mx-auto mb-2 text-4xl opacity-80" />
+              <p className="font-medium">{err}</p>
+            </div>
+          ) : loading ? (
+            <div className="p-12 text-center">
+              <Spinner size="xl" color="warning" aria-label="Cargando..." />
+              <p className="mt-3 text-gray-500 animate-pulse text-sm">Cargando membresías...</p>
+            </div>
+          ) : !rows.length ? (
+            <div className="p-16 text-center text-gray-400">
+              <div className="w-16 h-16 get-center mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <Icon icon="solar:documents-minimalistic-broken" width={32} />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300">No se encontraron resultados</h3>
+              <p className="text-sm mt-1">Intenta ajustar los filtros o busca otro nombre.</p>
+            </div>
+          ) : (
+            <Table hoverable className="w-full text-left bg-transparent">
+              <Table.Head className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                <Table.HeadCell className="py-4 pl-6 text-gray-500 font-semibold tracking-wider text-xs uppercase">INFO BÁSICA</Table.HeadCell>
+                <Table.HeadCell className="py-4 text-gray-500 font-semibold tracking-wider text-xs uppercase">FECHAS & PROGRESO</Table.HeadCell>
+                <Table.HeadCell className="py-4 text-gray-500 font-semibold tracking-wider text-xs uppercase">ESTADO</Table.HeadCell>
+                <Table.HeadCell className="py-4 text-gray-500 font-semibold tracking-wider text-xs uppercase text-center">SESIONES</Table.HeadCell>
+                <Table.HeadCell className="py-4 pr-6 text-right"><span className="sr-only">Acciones</span></Table.HeadCell>
               </Table.Head>
-              <Table.Body className="divide-y divide-border dark:divide-darkborder">
-                {rows.map((r) => {
-                  const precioFmt =
-                    (r as any).precio != null
-                      ? Number((r as any).precio).toLocaleString("es-CO", {
-                          style: "currency",
-                          currency: "COP",
-                        })
-                      : "—";
-
-                  const { progress, color, daysLeft } = progressByRemainingDays(
-                    r.fecha_inicio as any,
-                    r.fecha_fin as any
-                  );
-                  const daysDisplay =
-                    typeof (r as any).days_left === "number" && Number.isFinite((r as any).days_left)
-                      ? Math.max(0, Math.round((r as any).days_left))
-                      : daysLeft;
-
+              <Table.Body className="divide-y divide-gray-100 dark:divide-gray-700">
+                {rows.map((r, index) => {
+                  const precioFmt = (r as any).precio != null
+                    ? Number((r as any).precio).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 })
+                    : "—";
+                  const { progress, color, daysLeft } = progressByRemainingDays(r.fecha_inicio as any, r.fecha_fin as any);
+                  const daysDisplay = typeof (r as any).days_left === "number" ? Math.max(0, Math.round((r as any).days_left)) : daysLeft;
                   const ventaIdForRow = Number((r as any).id_venta);
                   const isRowLoading = rowLoading != null && ventaIdForRow === rowLoading;
 
                   return (
-                    <Table.Row
-                      key={ventaIdForRow || (r as any).id}
-                      className="hover:bg-[rgba(255,213,74,0.06)] transition-colors"
-                    >
-                      <Table.Cell>{(r as any).id}</Table.Cell>
-
-                      <Table.Cell>
-                        <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="hover:underline">
-                          <Foto src={(r as any).foto} />
-                        </Link>
-                      </Table.Cell>
-
-                      <Table.Cell className="whitespace-nowrap ps-6">
-                        <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="hover:underline">
-                          <h5 className="text-base text-wrap">
-                            {(r as any).nombre} {(r as any).apellido}
-                          </h5>
-                          <div className="text-sm font-medium text-dark opacity-70 mb-2 text-wrap">
-                            CC. {(r as any).documento}
-                          </div>
-                        </Link>
-                      </Table.Cell>
-
-                      <Table.Cell className="whitespace-nowrap ps-6">
-                        <h5 className="text-base text-wrap">
-                          Fecha inicio: {formatDate(r.fecha_inicio)} — Vence: {formatDate(r.fecha_fin)}
-                        </h5>
-                        <div className="text-sm font-medium text-dark opacity-70 mb-2 text-wrap">{precioFmt}</div>
-
-                        <div className="me-5">
-                          <Progress progress={progress} color={color} size="sm" />
-                          <div className="text-xs opacity-70 mt-1">
-                            {Number.isFinite(daysDisplay)
-                              ? `${daysDisplay} día${daysDisplay === 1 ? "" : "s"} restantes`
-                              : "—"}
+                    <Table.Row key={`${(r as any).id}-${index}`} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                      {/* Básico */}
+                      <Table.Cell className="py-4 pl-6">
+                        <div className="flex items-center gap-4">
+                          <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="relative shrink-0">
+                            <Foto src={(r as any).foto} />
+                          </Link>
+                          <div>
+                            <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="font-semibold text-gray-900 dark:text-white hover:text-primary transition-colors line-clamp-1 text-base">
+                              {(r as any).nombre} {(r as any).apellido}
+                            </Link>
+                            <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                              <Icon icon="solar:card-linear" width={14} />
+                              {(r as any).documento}
+                            </div>
                           </div>
                         </div>
                       </Table.Cell>
 
-                      <Table.Cell>
-                        <Badge color={badgeColor((r as any).estado)}>{(r as any).estado}</Badge>
+                      {/* Fechas */}
+                      <Table.Cell className="py-4">
+                        <div className="flex flex-col gap-1.5 min-w-[180px]">
+                          <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Del <span className="text-gray-900 dark:text-white font-semibold">{formatDate(r.fecha_inicio)}</span> al <span className="text-gray-900 dark:text-white font-semibold">{formatDate(r.fecha_fin)}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-600 overflow-hidden">
+                            <div className={`h-1.5 rounded-full ${color === 'red' ? 'bg-red-500' : color === 'yellow' ? 'bg-yellow-400' : 'bg-green-500'}`} style={{ width: `${progress}%` }}></div>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-gray-500">
+                            <span>{precioFmt}</span>
+                            <span className={`font-medium ${color === 'red' ? 'text-red-500' : ''}`}>
+                              {Number.isFinite(daysDisplay) ? `${daysDisplay} días restantes` : "—"}
+                            </span>
+                          </div>
+                        </div>
                       </Table.Cell>
 
-                      <Table.Cell>{(r as any).sesiones_restantes ?? "—"}</Table.Cell>
+                      {/* Estado */}
+                      <Table.Cell className="py-4">
+                        <Badge color={badgeColor((r as any).estado)} className="text-xs font-bold uppercase tracking-wide gap-1 w-fit rounded-md px-2.5 py-1" />
+                      </Table.Cell>
 
-                      <Table.Cell>
-                        <Dropdown
-                          label=""
-                          dismissOnClick={false}
-                          renderTrigger={() => (
-                            <span className="h-9 w-9 flex justify-center items-center rounded-full hover:bg-lightprimary hover:text-primary cursor-pointer">
-                              <HiOutlineDotsVertical size={22} />
-                            </span>
-                          )}
-                        >
-                          <Link to={`/clientes/${(r as any).id}/editar-membresia`} className="w-full">
-                            <Dropdown.Item className="flex gap-3">
-                              <Icon icon="solar:pen-new-square-broken" height={18} />
-                              <span>Editar</span>
+                      {/* Sesiones */}
+                      <Table.Cell className="py-4 text-center">
+                        <div className="font-bold text-gray-800 dark:text-white text-base">
+                          {(r as any).sesiones_restantes ?? "—"}
+                        </div>
+                        <div className="text-[10px] uppercase text-gray-400 tracking-wider">Disponicles</div>
+                      </Table.Cell>
+
+                      {/* Acciones */}
+                      <Table.Cell className="py-4 pr-6 text-right">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity justify-end flex">
+                          <Dropdown inline label="" dismissOnClick={false} renderTrigger={() => (
+                            <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 transition-colors">
+                              <HiOutlineDotsVertical className="w-5 h-5" />
+                            </button>
+                          )}>
+                            <Dropdown.Item as={Link} to={`/clientes/${(r as any).id}/editar-membresia`} className="flex items-center gap-2 text-sm">
+                              <Icon icon="solar:pen-new-square-broken" className="text-gray-500" width={18} /> Editar Detalles
                             </Dropdown.Item>
-                          </Link>
 
-                          <Dropdown.Item
-                            className="flex gap-3 disabled:opacity-50"
-                            onClick={() => handleRestarSesion(r)}
-                            disabled={isRowLoading || Number((r as any).sesiones_restantes ?? 0) <= 0}
-                          >
-                            {isRowLoading ? (
-                              <>
-                                <Spinner size="sm" />
-                                <span>Restando…</span>
-                              </>
-                            ) : (
-                              <>
-                                <Icon icon="solar:minus-square-linear" height={18} />
-                                <span>Restar sesión</span>
-                              </>
-                            )}
-                          </Dropdown.Item>
-
-                          <Link to="/clientes/new-with-membresia" className="w-full">
-                            <Dropdown.Item className="flex gap-3">
-                              <Icon icon="solar:add-circle-outline" height={18} />
-                              <span>Agregar</span>
+                            <Dropdown.Item
+                              onClick={() => handleRestarSesion(r)}
+                              disabled={isRowLoading || Number((r as any).sesiones_restantes ?? 0) <= 0}
+                              className="flex items-center gap-2 text-sm disabled:opacity-50"
+                            >
+                              {isRowLoading ? <Spinner size="sm" /> : <Icon icon="solar:minus-square-linear" className="text-red-500" width={18} />}
+                              <span className={isRowLoading ? "" : "text-red-600 font-medium"}>Restar Sesión</span>
                             </Dropdown.Item>
-                          </Link>
-                        </Dropdown>
+                          </Dropdown>
+                        </div>
                       </Table.Cell>
                     </Table.Row>
                   );
                 })}
               </Table.Body>
             </Table>
+          )}
+        </div>
 
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <nav className="mt-4 flex items-center justify-between md:justify-end gap-3" aria-label="Paginación">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl
-                             bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                             text-black shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                             hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Anterior"
-                >
-                  <Icon icon="solar:alt-arrow-left-outline" width="18" height="18" />
-                  <span className="hidden sm:inline">Anterior</span>
-                </button>
+        {/* Footer / Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-gray-500">
+              Mostrando página <span className="font-bold">{page}</span> de <span className="font-bold">{totalPages}</span> — <span className="font-bold">{totalItems}</span> registros totales
+            </div>
 
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  Página <span className="font-semibold">{page}</span> de{" "}
-                  <span className="font-semibold">{totalPages}</span>
-                  <span className="ml-2 inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs">
-                    Total: {totalItems}
-                  </span>
-                </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="p-2 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+              >
+                <Icon icon="solar:alt-arrow-left-linear" width={20} />
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl
-                             bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                             text-black shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                             hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Siguiente"
-                >
-                  <span className="hidden sm:inline">Siguiente</span>
-                  <Icon icon="solar:alt-arrow-right-outline" width="18" height="18" />
-                </button>
-              </nav>
-            )}
-          </>
+              {/* Simplified Page Numbers */}
+              {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                // Logic to show nearby pages
+                let p = page;
+                if (page < 3) p = 1 + i;
+                else if (page > totalPages - 2) p = totalPages - 4 + i;
+                else p = page - 2 + i;
+
+                if (p < 1 || p > totalPages) return null;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${p === page ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-white hover:text-primary'}`}
+                  >
+                    {p}
+                  </button>
+                )
+              })}
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="p-2 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+              >
+                <Icon icon="solar:alt-arrow-right-linear" width={20} />
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

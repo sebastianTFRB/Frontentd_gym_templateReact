@@ -71,8 +71,20 @@ async function uploadBase64ToBackend(
   fd.append("documento", documento);
   fd.append("file", blob, `${documento}.${mime === "image/png" ? "png" : "jpg"}`);
 
+  let token = "";
+  try {
+    const item = localStorage.getItem("auth-storage");
+    if (item) {
+      const parsed = JSON.parse(item);
+      if (parsed.state?.token) token = parsed.state.token;
+    }
+  } catch (e) { }
+
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+
   const res = await fetch(`${API_BASE}/uploads/files/upload-foto`, {
     method: "POST",
+    headers,
     body: fd,
   });
   if (!res.ok) {
@@ -97,6 +109,7 @@ interface ClientePayload {
   fotografia?: string;
   huella_base64: string;
   id_tipo_descuento?: number | 1;
+  observaciones?: string;
 }
 interface VentaPayload {
   id_membresia: number;
@@ -166,6 +179,7 @@ export default function NuevoClienteConMembresia() {
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
+  const [observaciones, setObservaciones] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState<string>("");
 
   // Webcam
@@ -317,14 +331,10 @@ export default function NuevoClienteConMembresia() {
     return Number.isNaN(n) || n < 0;
   }, [precioFinal]);
 
-  // ===== Clases input del template
-  const baseInput =
-    "block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50 text-gray-900 " +
-    "focus:border-cyan-500 focus:ring-cyan-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white " +
-    "dark:placeholder-gray-400 dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg";
+
 
   // Submit
-  const onSubmit = async (e: React.FormEvent) => { 
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setInfo(null);
@@ -370,8 +380,9 @@ export default function NuevoClienteConMembresia() {
           telefono: telefono.trim() || undefined,
           direccion: direccion.trim() || undefined,
           fotografia: fotografiaRuta,
-          id_tipo_descuento:  1,
+          id_tipo_descuento: 1,
           huella_base64: "",
+          observaciones: observaciones.trim() || undefined,
         },
         venta: {
           id_membresia: Number(idMembresia),
@@ -401,414 +412,323 @@ export default function NuevoClienteConMembresia() {
       const msg = e?.response?.data?.detail || e?.message || "Error al guardar.";
       setError(String(msg));
       MySwal.fire({
-          icon: "error",
-          title: "¡Error al guardar!",
-          text: "Error al crear",
-          confirmButtonColor: "#d63030ff",
-        });
+        icon: "error",
+        title: "¡Error al guardar!",
+        text: "Error al crear",
+        confirmButtonColor: "#d63030ff",
+      });
     } finally {
       setSaving(false);
     }
   };
-     
+
   return (
-    <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-      {/* Header */}
-      <header className="flex items-center justify-between mb-4">
-        <h5 className="card-title">Nuevo cliente con membresía</h5>
+    <div className="p-6 transition-all duration-300 ease-in-out">
+      {/* Decorative Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[10%] left-[20%] w-96 h-96 bg-primary/5 rounded-full blur-[100px]"></div>
+        <div className="absolute bottom-[10%] right-[10%] w-80 h-80 bg-yellow-400/5 rounded-full blur-[80px]"></div>
+      </div>
 
-        <Link
-          to="/clientes/membresias"
-          role="button"
-          className="flex items-center justify-center px-4 py-3 gap-3 text-[15px]
-                     leading-[normal] font-medium text-black
-                     bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                     rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
-                     focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-        >
-          <Icon icon="solar:alt-arrow-left-outline" width="18" height="18" />
-          <span>Volver</span>
-        </Link>
-      </header>
+      <div className="max-w-7xl mx-auto relative z-10">
 
-      {error && (
-        <div className="mb-3 text-sm rounded-xl border border-red-200 bg-red-50 text-red-700 px-3 py-2">
-          {error}
-        </div>
-      )}
-      {info && (
-        <div className="mb-3 text-sm rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-2">
-          {info}
-        </div>
-      )}
-
-      {loadingCat ? (
-        <div className="flex items-center gap-2">
-          <Spinner />
-          <span>Cargando catálogos…</span>
-        </div>
-      ) : (
-        <form onSubmit={onSubmit} className="space-y-8">
-          {/* Datos del cliente */}
-          <section>
-            <h6 className="font-semibold mb-3">Datos del cliente</h6>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Nombre */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="nombre" className="sr-only">Nombre</label>
-                  <input
-                    id="nombre"
-                    type="text"
-                    className={baseInput}
-                    placeholder="Nombre"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Apellido */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="apellido" className="sr-only">Apellido</label>
-                  <input
-                    id="apellido"
-                    type="text"
-                    className={baseInput}
-                    placeholder="Apellido"
-                    value={apellido}
-                    onChange={(e) => setApellido(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Documento */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="documento" className="sr-only">Documento</label>
-                  <input
-                    id="documento"
-                    type="text"
-                    className={baseInput}
-                    placeholder="Documento"
-                    value={documento}
-                    onChange={(e) => setDocumento(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Fecha nacimiento */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="fecha_nacimiento" className="sr-only">Fecha de nacimiento</label>
-                  <input
-                    id="fecha_nacimiento"
-                    type="date"
-                    className={baseInput}
-                    value={fechaNacimiento}
-                    onChange={(e) => setFechaNacimiento(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Correo */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="correo" className="sr-only">Correo</label>
-                  <input
-                    id="correo"
-                    type="email"
-                    className={baseInput}
-                    placeholder="Correo"
-                    value={correo}
-                    onChange={(e) => setCorreo(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Teléfono */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="telefono" className="sr-only">Teléfono</label>
-                  <input
-                    id="telefono"
-                    type="text"
-                    className={baseInput}
-                    placeholder="Teléfono"
-                    value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Dirección */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="direccion" className="sr-only">Dirección</label>
-                  <input
-                    id="direccion"
-                    type="text"
-                    className={baseInput}
-                    placeholder="Dirección"
-                    value={direccion}
-                    onChange={(e) => setDireccion(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Foto por webcam */}
-          <section>
-            <h6 className="font-semibold mb-3">Fotografía</h6>
-            {!fotoBase64 && !camOn && (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={startCamera}
-                  className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-black
-                             bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                             shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                             hover:brightness-[1.03] transition-all focus:outline-none
-                             focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-                >
-                  <Icon icon="solar:camera-outline" width="18" height="18" />
-                  Abrir cámara
-                </button>
-                {camError && <span className="text-red-600 text-sm">{camError}</span>}
-              </div>
-            )}
-
-            {camOn && (
-              <div className="flex flex-col gap-3">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full max-w-md rounded-xl border aspect-video bg-black ring-2 ring-[var(--color-gold-start,#FFD54A)]/40"
-                />
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={takePhoto}
-                    disabled={!videoReady}
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-black
-                               bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                               shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                               hover:brightness-[1.03] disabled:opacity-50 transition-all
-                               focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-                  >
-                    <Icon icon="solar:square-round-check-outline" width="18" height="18" />
-                    Tomar foto
-                  </button>
-                  <button
-                    type="button"
-                    onClick={stopCamera}
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                  >
-                    <Icon icon="solar:close-circle-outline" width="18" height="18" />
-                    Cancelar
-                  </button>
-                </div>
-                <canvas ref={canvasRef} className="hidden" />
-              </div>
-            )}
-
-            {fotoBase64 && !camOn && (
-              <div className="flex items-center gap-4">
-                <img
-                  src={`data:image/jpeg;base64,${fotoBase64}`}
-                  alt="preview"
-                  className="h-32 w-32 object-cover rounded-xl border ring-2 ring-[var(--color-gold-start,#FFD54A)]/40"
-                />
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={clearPhoto}
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                  >
-                    <Icon icon="solar:refresh-outline" width="18" height="18" />
-                    Cambiar foto
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Venta */}
-          <section>
-            <h6 className="font-semibold mb-3">Venta de membresía</h6>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Membresía */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="id_membresia" className="sr-only">Membresía</label>
-                  <select
-                    id="id_membresia"
-                    className={baseInput}
-                    value={idMembresia}
-                    onChange={(e) => {
-                      const newId = e.target.value ? Number(e.target.value) : "";
-                      setIdMembresia(newId);
-
-                      // Reiniciar sesiones por defecto
-                      const defSessions = defaultSessionsFor(membresias, newId);
-                      if (defSessions != null && Number.isFinite(defSessions)) {
-                        setSesionesRestantes(String(defSessions));
-                      }
-
-                      // Autocompletar precio
-                      const m = membresias.find((x) => x.id === Number(newId));
-                      const { precio } = extractPrecioYSesiones(m);
-                      if (precio != null && Number.isFinite(precio)) setPrecioFinal(String(precio));
-
-                      // Ajustar fecha fin con duración
-                      const dur = durationDaysFor(membresias, newId);
-                      if (dur) {
-                        setFechaFin(addDaysStr(fechaInicio, dur)); // usa (dur - 1) si quieres inclusivo
-                        setTouchedFin(false);
-                      } else {
-                        setFechaFin(addMonthsStr(fechaInicio, 1));
-                        setTouchedFin(false);
-                      }
-                    }}
-                    required
-                  >
-                    <option value="">Selecciona…</option>
-                    {membresias.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nombre_membresia}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Fecha inicio */}
-              <input
-                id="fecha_inicio"
-                type="date"
-                className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                aria-invalid={dateInvalid || undefined}
-                value={fechaInicio}
-                onChange={(e) => {
-                  const d = parseDateOnlyLocal(e.target.value);
-                  setFechaInicio(d ? fmtDateInputLocal(d) : e.target.value);
-                }}
-              />
-
-              {/* Fecha fin */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="fecha_fin" className="sr-only">Fecha fin</label>
-                  <input
-                    id="fecha_fin"
-                    type="date"
-                    className={`${baseInput} ${dateInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                    aria-invalid={dateInvalid || undefined}
-                    value={fechaFin}
-                    onChange={(e) => {
-                      const d = parseDateOnlyLocal(e.target.value);
-                      setFechaFin(d ? fmtDateInputLocal(d) : e.target.value);
-                      setTouchedFin(true);
-                    }}
-                  />
-                  {dateInvalid && (
-                    <p className="mt-1 text-xs text-red-600">
-                      La fecha de fin debe ser el mismo día o posterior a la fecha de inicio.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Precio */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="precio_final" className="sr-only">Precio</label>
-                  <input
-                    id="precio_final"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    className={`${baseInput} ${precioInvalid ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                    aria-invalid={precioInvalid || undefined}
-                    value={precioFinal}
-                    onChange={(e) => setPrecioFinal(e.target.value)}
-                  />
-                  {precioInvalid && (
-                    <p className="mt-1 text-xs text-red-600">El precio debe ser mayor o igual a 0.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Sesiones */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="sesiones" className="sr-only">Sesiones restantes</label>
-                  <input
-                    id="sesiones"
-                    type="number"
-                    min={0}
-                    step={1}
-                    placeholder="0"
-                    className={baseInput}
-                    value={sesionesRestantes}
-                    onChange={(e) => setSesionesRestantes(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Estado (solo lectura) */}
-              <div className="flex form-control form-rounded-xl">
-                <div className="relative w-full">
-                  <label htmlFor="estado" className="sr-only">Estado</label>
-                  <input id="estado" type="text" className={baseInput} value="Activo" readOnly />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Acciones */}
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={saving || dateInvalid || precioInvalid}
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-black
-                         bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                         shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                         hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed
-                         focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-            >
-              {saving ? (
-                <>
-                  <Spinner size="sm" />
-                  Guardando…
-                </>
-              ) : (
-                <>
-                  <Icon icon="solar:floppy-disk-outline" width="18" height="18" />
-                  Guardar
-                </>
-              )}
-            </button>
-
-            <Link
-              to="/clientes/membresias"
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-            >
-              <Icon icon="solar:close-circle-outline" width="18" height="18" />
-              Cancelar
-            </Link>
+        {/* Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h5 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <Icon icon="solar:user-plus-rounded-bold-duotone" className="text-primary" />
+              Nuevo Cliente
+            </h5>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Registra la información personal y asigna una membresía inicial.
+            </p>
           </div>
-        </form>
-      )}
+          <Link
+            to="/clientes/membresias"
+            className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <Icon icon="solar:arrow-left-linear" width={18} />
+            <span>Volver al listado</span>
+          </Link>
+        </div>
+
+        {error && (
+          <div className="mb-4 text-sm rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 flex items-center gap-2">
+            <Icon icon="solar:danger-circle-bold" className="text-lg" />
+            {error}
+          </div>
+        )}
+        {info && (
+          <div className="mb-4 text-sm rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 flex items-center gap-2">
+            <Icon icon="solar:check-circle-bold" className="text-lg" />
+            {info}
+          </div>
+        )}
+
+        {(() => {
+          const inputClass = "w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all p-2.5 text-sm outline-none";
+          const labelClass = "block mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400";
+
+          return (
+            <>
+              {loadingCat ? (
+                <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 p-12 flex flex-col items-center justify-center min-h-[400px]">
+                  <Spinner size="xl" color="warning" />
+                  <span className="mt-4 text-gray-500 animate-pulse">Cargando catálogo de membresías...</span>
+                </div>
+              ) : (
+                <form onSubmit={onSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                  {/* Columna Izquierda: Datos Personales + Foto */}
+                  <div className="lg:col-span-7 space-y-6">
+
+                    {/* Tarjeta: Información Personal */}
+                    <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30 flex items-center gap-2">
+                        <Icon icon="solar:user-id-linear" className="text-primary" width={20} />
+                        <h6 className="font-semibold text-gray-800 dark:text-white">Información Personal</h6>
+                      </div>
+
+                      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label htmlFor="nombre" className={labelClass}>Nombre *</label>
+                          <input id="nombre" type="text" className={inputClass} placeholder="Ej: Juan" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+                        </div>
+                        <div>
+                          <label htmlFor="apellido" className={labelClass}>Apellido *</label>
+                          <input id="apellido" type="text" className={inputClass} placeholder="Ej: Pérez" value={apellido} onChange={(e) => setApellido(e.target.value)} required />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="documento" className={labelClass}>Documento de Identidad *</label>
+                          <input id="documento" type="text" className={inputClass} placeholder="Ej: 1234567890" value={documento} onChange={(e) => setDocumento(e.target.value)} required />
+                        </div>
+                        <div>
+                          <label htmlFor="fecha_nacimiento" className={labelClass}>Fecha de Nacimiento</label>
+                          <input id="fecha_nacimiento" type="date" className={inputClass} value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
+                        </div>
+                        <div>
+                          <label htmlFor="telefono" className={labelClass}>Teléfono</label>
+                          <input id="telefono" type="text" className={inputClass} placeholder="Ej: 300 123 4567" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="correo" className={labelClass}>Correo Electrónico</label>
+                          <input id="correo" type="email" className={inputClass} placeholder="cliente@email.com" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="direccion" className={labelClass}>Dirección</label>
+                          <input id="direccion" type="text" className={inputClass} placeholder="Dirección de residencia" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label htmlFor="observaciones" className={labelClass}>Observaciones</label>
+                          <textarea id="observaciones" className={inputClass} placeholder="Notas adicionales..." rows={3} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tarjeta: Fotografía */}
+                    <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30 flex items-center gap-2">
+                        <Icon icon="solar:camera-linear" className="text-primary" width={20} />
+                        <h6 className="font-semibold text-gray-800 dark:text-white">Fotografía</h6>
+                      </div>
+                      <div className="p-6">
+                        {!fotoBase64 && !camOn && (
+                          <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 transition-colors">
+                            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mb-3">
+                              <Icon icon="solar:camera-add-linear" width={32} className="text-gray-500" />
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white">Agregar Foto</h3>
+                            <p className="text-xs text-gray-500 mb-4">Usa la cámara web para capturar</p>
+                            <button
+                              type="button"
+                              onClick={startCamera}
+                              className="px-5 py-2.5 bg-primary text-white font-medium rounded-lg shadow-lg shadow-primary/30 hover:brightness-110 transition-all flex items-center gap-2"
+                            >
+                              <Icon icon="solar:camera-minimalistic-bold" width={18} /> Iniciar Cámara
+                            </button>
+                            {camError && <span className="text-red-500 text-xs mt-2 font-medium">{camError}</span>}
+                          </div>
+                        )}
+
+                        {camOn && (
+                          <div className="flex flex-col items-center gap-4 animate-fade-in">
+                            <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-4 ring-primary/20 max-w-sm w-full bg-black">
+                              <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-video object-cover transform scale-x-[-1]" />
+                              <canvas ref={canvasRef} className="hidden" />
+
+                              {/* Camera Overlay */}
+                              <div className="absolute inset-0 border-[3px] border-white/30 rounded-2xl pointer-events-none"></div>
+                              <div className="absolute top-4 right-4 flex gap-2">
+                                <span className="px-2 py-0.5 bg-red-500/80 text-white text-[10px] font-bold rounded uppercase tracking-wider animate-pulse">REC</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <button type="button" onClick={stopCamera} className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                                <Icon icon="solar:close-circle-bold" width={22} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={takePhoto}
+                                disabled={!videoReady}
+                                className="h-12 w-12 rounded-full border-4 border-white shadow-xl bg-primary flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all"
+                              >
+                                <Icon icon="solar:camera-minimalistic-bold" width={24} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {fotoBase64 && !camOn && (
+                          <div className="flex items-center gap-6 animate-fade-in">
+                            <div className="relative group">
+                              <img src={`data:image/jpeg;base64,${fotoBase64}`} alt="Foto cliente" className="w-32 h-32 object-cover rounded-2xl shadow-lg ring-4 ring-gray-100 dark:ring-gray-700" />
+                              <div className="absolute -bottom-2 -right-2 bg-green-500 text-white p-1 rounded-full border-2 border-white shadow-sm">
+                                <Icon icon="solar:check-circle-bold" width={16} />
+                              </div>
+                              <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button onClick={clearPhoto} type="button" className="text-white bg-red-500/80 p-2 rounded-full hover:bg-red-600 transition-colors">
+                                  <Icon icon="solar:trash-bin-trash-bold" width={20} />
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <h5 className="font-semibold text-gray-900 dark:text-white">Foto capturada</h5>
+                              <p className="text-xs text-gray-500 mb-2">Se ve bien. Si quieres cambiarla, usa el botón sobre la imagen.</p>
+                              <button type="button" onClick={clearPhoto} className="text-xs text-red-500 font-medium hover:underline">Eliminar y tomar nueva</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columna Derecha: Membresía + Acciones */}
+                  <div className="lg:col-span-5 space-y-6">
+                    <div className="rounded-2xl shadow-xl bg-white dark:bg-gray-800 border-2 border-primary/20 overflow-hidden relative">
+                      {/* Highlight Top */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-yellow-400"></div>
+
+                      <div className="p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <Icon icon="solar:bill-list-bold-duotone" width={22} />
+                          </div>
+                          <div>
+                            <h6 className="font-bold text-gray-800 dark:text-white text-lg">Membresía</h6>
+                            <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Configuración de venta</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-5">
+                          <div>
+                            <label htmlFor="id_membresia" className={labelClass}>Seleccionar Plan *</label>
+                            <select
+                              id="id_membresia"
+                              className={inputClass}
+                              value={idMembresia}
+                              onChange={(e) => {
+                                // (Lógica existente preservada)
+                                const newId = e.target.value ? Number(e.target.value) : "";
+                                setIdMembresia(newId);
+                                const defSessions = defaultSessionsFor(membresias, newId);
+                                if (defSessions != null && Number.isFinite(defSessions)) setSesionesRestantes(String(defSessions));
+                                const m = membresias.find((x) => x.id === Number(newId));
+                                const { precio } = extractPrecioYSesiones(m);
+                                if (precio != null && Number.isFinite(precio)) setPrecioFinal(String(precio));
+                                const dur = durationDaysFor(membresias, newId);
+                                if (dur) {
+                                  setFechaFin(addDaysStr(fechaInicio, dur));
+                                  setTouchedFin(false);
+                                } else {
+                                  setFechaFin(addMonthsStr(fechaInicio, 1));
+                                  setTouchedFin(false);
+                                }
+                              }}
+                              required
+                            >
+                              <option value="">-- Seleccionar --</option>
+                              {membresias.map((m) => (
+                                <option key={m.id} value={m.id}> {m.nombre_membresia} </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label htmlFor="fecha_inicio" className={labelClass}>Inicio</label>
+                              <input id="fecha_inicio" type="date" className={`${inputClass} ${dateInvalid ? 'border-red-500 text-red-600' : ''}`} value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                            </div>
+                            <div>
+                              <label htmlFor="fecha_fin" className={labelClass}>Fin</label>
+                              <input id="fecha_fin" type="date" className={`${inputClass} ${dateInvalid ? 'border-red-500 text-red-600' : ''}`} value={fechaFin} onChange={(e) => { setFechaFin(e.target.value); setTouchedFin(true); }} />
+                            </div>
+                          </div>
+                          {dateInvalid && <p className="text-xs text-red-500 font-medium bg-red-50 p-2 rounded">⚠ La fecha de fin no puede ser anterior al inicio.</p>}
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label htmlFor="precio_final" className={labelClass}>Precio (COP)</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-gray-400 text-sm">$</span>
+                                <input id="precio_final" type="number" step="0.01" className={`${inputClass} pl-6`} placeholder="0" value={precioFinal} onChange={(e) => setPrecioFinal(e.target.value)} />
+                              </div>
+                            </div>
+                            <div>
+                              <label htmlFor="sesiones" className={labelClass}>Sesiones</label>
+                              <input id="sesiones" type="number" step="1" className={inputClass} placeholder="∞" value={sesionesRestantes} onChange={(e) => setSesionesRestantes(e.target.value)} />
+                            </div>
+                          </div>
+
+                          <div className="pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-medium text-gray-500">Estado Inicial</span>
+                              <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-100 text-green-700 uppercase">Activa</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-500">Total a Pagar</span>
+                              <span className="text-xl font-bold text-gray-900 dark:text-white">
+                                {precioFinal ? Number(precioFinal).toLocaleString('es-CO', { style: 'currency', currency: 'COP' }) : '$ 0'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botones de Acción */}
+                    <div className="space-y-3 pt-2">
+                      <button
+                        type="submit"
+                        disabled={saving || dateInvalid || precioInvalid}
+                        className="w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-lg
+                                      bg-gradient-to-r from-primary to-yellow-500 text-white shadow-lg shadow-yellow-500/30
+                                      hover:translate-y-[-2px] hover:shadow-yellow-500/50 active:translate-y-[0px] transition-all
+                                      disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? (
+                          <> <Spinner size="sm" color="white" /> Registrando... </>
+                        ) : (
+                          <> <Icon icon="solar:check-circle-bold" width={24} /> Registrar Cliente </>
+                        )}
+                      </button>
+
+                      <Link
+                        to="/clientes/membresias"
+                        className="block w-full text-center py-3 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors"
+                      >
+                        Cancelar operación
+                      </Link>
+                    </div>
+                  </div>
+
+                </form>
+              )}
+            </>
+          );
+        })()}
+      </div>
     </div>
   );
 }
+

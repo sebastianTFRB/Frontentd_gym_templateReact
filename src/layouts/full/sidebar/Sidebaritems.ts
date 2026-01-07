@@ -90,6 +90,21 @@ const SidebarContent: MenuItem[] = [
             url: "/TipoDescuento",
             isPro: false,
           },
+          {
+            name: "Usuarios",
+            icon: "solar:users-group-rounded-linear",
+            id: uniqueId(),
+            url: "/users",
+            isPro: false, // Only visible if we add permission logic later, or always visible but backend protects data
+          },
+          {
+            name: "Luces Gym",
+            icon: "solar:lightbulb-bolt-bold-duotone",
+            id: uniqueId(),
+            url: "/config/luces",
+            color: "#FFD54A",
+            isPro: false,
+          },
         ],
       },
     ],

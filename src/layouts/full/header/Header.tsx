@@ -1,12 +1,11 @@
 
 import { useState, useEffect } from "react";
-import {  Button, Navbar } from "flowbite-react";
+import { Navbar } from "flowbite-react";
 import { Icon } from "@iconify/react";
 import Profile from "./Profile";
 import Notification from "./notification";
 import { Drawer } from "flowbite-react";
 import MobileSidebar from "../sidebar/MobileSidebar";
-import { Link } from "react-router";
 
 
 const Header = () => {
@@ -35,8 +34,8 @@ const Header = () => {
     <>
       <header
         className={`sticky top-0 z-[5] ${isSticky
-            ? "bg-white dark:bg-dark fixed w-full"
-            : "bg-white"
+          ? "bg-white dark:bg-dark fixed w-full"
+          : "bg-white"
           }`}
       >
         <Navbar
@@ -57,9 +56,6 @@ const Header = () => {
             </div>
 
             <div className="flex gap-4 items-center">
-              <Button as={Link} target="_blank" to="https://adminmart.com/product/matdash-tailwind-react-admin-template/?ref=56#product-demo-section" size={'sm'} color={"primary"} className="rounded-md py-1 px-3">
-                Check Pro Template
-              </Button>
               <Profile />
             </div>
           </div>

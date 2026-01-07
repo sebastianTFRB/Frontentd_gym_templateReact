@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, useNavigate, Link } from "react-router-dom";
-import { Cliente, getClientes, deleteCliente } from "../../../api/clientes";
-import { Table, Badge, Dropdown, Spinner } from "flowbite-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Cliente, getClientes } from "../../../api/clientes";
+import { Table, Badge, Dropdown, Spinner, Button, TextInput } from "flowbite-react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { Icon } from "@iconify/react";
 import { API_BASE_URL } from "../../../api/apiConfig";
@@ -101,71 +101,46 @@ export default function ClientesList() {
   );
 
   const totalPages = pageData?.pages ?? 1;
-  const totalItems = pageData?.total ?? 0;
 
-  // 🔥 Eliminar cliente
-  const onDelete = async (id: number) => {
-    if (!confirm("¿Eliminar cliente?")) return;
-    try {
-      await deleteCliente(id);
-      loadClientes();
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo eliminar el cliente.");
-    }
-  };
+
+
 
   return (
     <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-      {/* Header con botón dorado */}
-      <header className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <h5 className="card-title">Clientes</h5>
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+        <h5 className="card-title">Gestión de Clientes</h5>
 
-        <NavLink
-          to="/add-client"
-          className="flex items-center justify-center px-4 py-3 gap-3 text-[15px]
-                     leading-[normal] font-medium text-black
-                     bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                     rounded-xl shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                     hover:brightness-[1.03] hover:-translate-y-[1px] active:translate-y-0 transition-all
-                     focus:outline-none focus:ring-2 focus:ring-[var(--color-gold-start,#FFD54A)]/60 focus:ring-offset-2"
-        >
-          <Icon icon="solar:add-circle-outline" width="18" height="18" />
-          <span>Nuevo</span>
-        </NavLink>
-      </header>
-
-      {/* 🔍 Búsqueda – a 1/2 de ancho */}
-      <div className="mb-4 w-full md:w-1/2">
-        <div className="flex form-control form-rounded-xl">
-          <div className="relative w-full">
-            <input
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="w-full md:w-64">
+            <TextInput
               id="search"
               type="text"
+              icon={() => <Icon icon="solar:magnifer-linear" height={18} />}
+              placeholder="Buscar cliente..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
                 setPage(1);
               }}
-              placeholder="Buscar por nombre, documento o email…"
-              aria-label="Buscar"
-              className="block w-full border disabled:cursor-not-allowed disabled:opacity-50 border-gray-300 bg-gray-50
-                         text-gray-900 focus:border-cyan-500 focus:ring-cyan-500
-                         dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400
-                         dark:focus:border-cyan-500 dark:focus:ring-cyan-500 p-2.5 text-sm rounded-lg"
             />
           </div>
+          <Button color="primary" onClick={() => navigate("/add-client")} className="flex items-center gap-2 whitespace-nowrap">
+            <Icon icon="solar:add-circle-outline" className="mr-2" width={18} height={18} />
+            Nuevo Cliente
+          </Button>
         </div>
       </div>
 
-      {/* 🚀 Tabla */}
       <div className="overflow-x-auto">
         {loading ? (
           <div className="flex justify-center py-6">
             <Spinner size="lg" />
           </div>
         ) : clientes.length === 0 ? (
-          <p className="text-center py-6">No hay clientes registrados.</p>
+          <div className="text-center py-16 text-dark opacity-70">
+            <Icon icon="solar:user-broken" width="48" className="mx-auto mb-2 opacity-50" />
+            <p>No hay clientes registrados.</p>
+          </div>
         ) : (
           <Table hoverable>
             <Table.Head>
@@ -183,43 +158,33 @@ export default function ClientesList() {
                 const foto = (c as any)?.fotografia || (c as any)?.foto || null;
 
                 return (
-                  <Table.Row
-                    key={c.id}
-                    className="hover:bg-[rgba(255,213,74,0.06)] transition-colors"
-                  >
-                    {/* Id */}
-                    <Table.Cell>{c.id}</Table.Cell>
+                  <Table.Row key={c.id}>
+                    <Table.Cell className="ps-6">{c.id}</Table.Cell>
 
-                    {/* Foto */}
                     <Table.Cell>
-                      <Link to={`/edit-client/${c.id}`} className="hover:underline">
+                      <Link to={`/edit-client/${c.id}`} className="hover:opacity-80 transition-opacity">
                         <Foto src={foto} />
                       </Link>
                     </Table.Cell>
 
-                    {/* Nombre */}
-                    <Table.Cell className="whitespace-nowrap ps-6">
-                      <Link to={`/edit-client/${c.id}`} className="hover:underline">
-                        <h5 className="text-base text-wrap">{fullName || "—"}</h5>
+                    <Table.Cell className="whitespace-nowrap font-medium text-dark">
+                      <Link to={`/edit-client/${c.id}`} className="hover:text-primary transition-colors">
+                        {fullName || "—"}
                       </Link>
                     </Table.Cell>
 
-                    {/* Documento */}
                     <Table.Cell>
-                      <span className="text-sm">{c.documento || "—"}</span>
+                      <span className="text-dark opacity-80">{c.documento || "—"}</span>
                     </Table.Cell>
 
-                    {/* Email */}
                     <Table.Cell>
-                      <span className="text-sm">{c.correo || "—"}</span>
+                      <span className="text-dark opacity-80">{c.correo || "—"}</span>
                     </Table.Cell>
 
-                    {/* Estado (placeholder) */}
                     <Table.Cell>
-                      <Badge color="success">activo</Badge>
+                      <Badge color="success">Activo</Badge>
                     </Table.Cell>
 
-                    {/* Acciones */}
                     <Table.Cell>
                       <Dropdown
                         label=""
@@ -230,7 +195,6 @@ export default function ClientesList() {
                           </span>
                         )}
                       >
-                        {/* Editar */}
                         <Dropdown.Item
                           className="flex gap-3 cursor-pointer"
                           onClick={() => navigate(`/edit-client/${c.id}`)}
@@ -238,18 +202,7 @@ export default function ClientesList() {
                           <Icon icon="solar:pen-new-square-broken" height={18} />
                           <span>Editar</span>
                         </Dropdown.Item>
-
-                        {/* Eliminar */}
-                        {/*<Dropdown.Item
-                          className="flex gap-3 cursor-pointer text-red-600"
-                          onClick={() => onDelete(c.id)}
-                        >
-                          <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
-                          <span>Eliminar</span>
-                        </Dropdown.Item>
-                        */}
                       </Dropdown>
-                      
                     </Table.Cell>
                   </Table.Row>
                 );
@@ -259,45 +212,30 @@ export default function ClientesList() {
         )}
       </div>
 
-      {/* Paginación con iconos y dorado */}
       {totalPages > 1 && (
-        <nav className="mt-4 flex items-center justify-between md:justify-end gap-3" aria-label="Paginación">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl
-                       bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                       text-black shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                       hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Anterior"
-          >
-            <Icon icon="solar:alt-arrow-left-outline" width="18" height="18" />
-            <span className="hidden sm:inline">Anterior</span>
-          </button>
-
-          <span className="text-sm text-gray-600 dark:text-gray-300">
-            Página <span className="font-semibold">{page}</span> de{" "}
-            <span className="font-semibold">{totalPages}</span>
-            <span className="ml-2 inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs">
-              Total: {totalItems}
-            </span>
+        <div className="flex justify-between items-center mt-4">
+          <span className="text-sm text-dark opacity-70">
+            Página <span className="font-semibold">{page}</span> de <span className="font-semibold">{totalPages}</span>
           </span>
-
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl
-                       bg-gradient-to-b from-[var(--color-gold-start,#FFD54A)] to-[var(--color-gold-end,#C89D0B)]
-                       text-black shadow-[0_16px_28px_-14px_rgba(247,181,0,.45)]
-                       hover:brightness-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Siguiente"
-          >
-            <span className="hidden sm:inline">Siguiente</span>
-            <Icon icon="solar:alt-arrow-right-outline" width="18" height="18" />
-          </button>
-        </nav>
+          <div className="flex gap-2">
+            <Button
+              color="gray"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              color="gray"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
