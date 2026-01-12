@@ -4,9 +4,13 @@ import customTheme from "./utils/theme/custom-theme";
 import router from "./routes/Router";
 import { useGymNotifications } from "./hooks/useGymNotifications";
 
+import { useSessionManager } from "./hooks/useSessionManager";
+
 function App() {
   // Activa el sistema global de notificaciones
   useGymNotifications();
+  // Activa el chequeo de sesión global
+  useSessionManager();
 
   return (
     <>

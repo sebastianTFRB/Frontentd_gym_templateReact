@@ -21,6 +21,7 @@ interface AuthState {
     token: string | null;
     user: User | null;
     isAuthenticated: boolean;
+    loginTime: number | null;
 
     // Actions
     setToken: (token: string) => void;
@@ -36,6 +37,7 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             user: null,
             isAuthenticated: false,
+            loginTime: null, // Track when the user logged in
 
             setToken: (token: string) => set({ token, isAuthenticated: !!token }),
             setUser: (user: User) => set({ user }),
@@ -52,7 +54,7 @@ export const useAuthStore = create<AuthState>()(
                     });
 
                     const { access_token } = response.data;
-                    set({ token: access_token, isAuthenticated: true });
+                    set({ token: access_token, isAuthenticated: true, loginTime: Date.now() });
 
                     // After login, fetch user details
                     await get().fetchUserMe();
@@ -74,12 +76,12 @@ export const useAuthStore = create<AuthState>()(
                 } catch (error) {
                     console.error("Failed to fetch user:", error);
                     // If 401, maybe logout?
-                    set({ token: null, isAuthenticated: false, user: null });
+                    set({ token: null, isAuthenticated: false, user: null, loginTime: null });
                 }
             },
 
             logout: () => {
-                set({ token: null, user: null, isAuthenticated: false });
+                set({ token: null, user: null, isAuthenticated: false, loginTime: null });
                 // Optional: redirect to login handled by router
                 window.location.href = '/auth/login';
             },
@@ -87,7 +89,7 @@ export const useAuthStore = create<AuthState>()(
         {
             name: 'auth-storage', // name of item in the storage (must be unique)
             storage: createJSONStorage(() => localStorage),
-            partialize: (state) => ({ token: state.token, user: state.user, isAuthenticated: state.isAuthenticated }),
+            partialize: (state) => ({ token: state.token, user: state.user, isAuthenticated: state.isAuthenticated, loginTime: state.loginTime }),
         }
     )
 );
